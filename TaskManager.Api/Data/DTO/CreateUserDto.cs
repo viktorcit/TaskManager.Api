@@ -1,8 +1,7 @@
 ﻿namespace TaskManager.Api.Data.DTO
 {
-    public class UserDto
+    public class CreateUserDto
     {
-        public int Id { get; set; }
         public string Name { get; set; } = null!;
         public int Age { get; set; }
     }
