@@ -49,7 +49,7 @@ namespace TaskManager.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<UserDto>> CreateUser(UserDto dto)
+        public async Task<ActionResult<RegisterUserDto>> CreateUser(RegisterUserDto dto)
         {
             var user = new User
             {

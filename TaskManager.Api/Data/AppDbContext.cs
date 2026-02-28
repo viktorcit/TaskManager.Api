@@ -8,7 +8,7 @@ namespace TaskManager.Api.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<User> Users => Set<User>();
-
+        public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -19,6 +19,8 @@ namespace TaskManager.Api.Data
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Age).IsRequired();
             });
+
+
         }
 
     }

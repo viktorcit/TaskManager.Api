@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaskManager.Api.Data;
 
@@ -10,9 +11,11 @@ using TaskManager.Api.Data;
 namespace TaskManager.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260228143237_ConfigureTaskItem")]
+    partial class ConfigureTaskItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -23,14 +26,8 @@ namespace TaskManager.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Description")
-                        .HasMaxLength(300)
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("DueDate")
@@ -39,20 +36,11 @@ namespace TaskManager.Api.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("Tasks");
                 });
@@ -74,37 +62,9 @@ namespace TaskManager.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("TaskItemId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TaskItemId");
-
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("TaskManager.Api.Model.TaskItem", b =>
-                {
-                    b.HasOne("TaskManager.Api.Model.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("TaskManager.Api.Model.User", b =>
-                {
-                    b.HasOne("TaskManager.Api.Model.TaskItem", null)
-                        .WithMany("Performers")
-                        .HasForeignKey("TaskItemId");
-                });
-
-            modelBuilder.Entity("TaskManager.Api.Model.TaskItem", b =>
-                {
-                    b.Navigation("Performers");
                 });
 #pragma warning restore 612, 618
         }
