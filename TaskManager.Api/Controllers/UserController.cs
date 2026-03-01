@@ -48,28 +48,6 @@ namespace TaskManager.Api.Controllers
             return Ok(response);
         }
 
-        [HttpPost]
-        public async Task<ActionResult<RegisterUserDto>> CreateUser(RegisterUserDto dto)
-        {
-            var user = new User
-            {
-                Name = dto.Name,
-                Age = dto.Age
-            };
-
-            _db.Users.Add(user);
-            await _db.SaveChangesAsync();
-
-            var response = new UserDto
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Age = user.Age
-            };
-
-            return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, response);
-        }
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
