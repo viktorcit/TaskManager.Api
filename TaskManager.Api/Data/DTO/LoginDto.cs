@@ -6,7 +6,7 @@ namespace TaskManager.Api.Data.DTO
     {
         [Required, MaxLength(20)]
         public string Nickname { get; set; } = null!;
-        [Range(1, 100)]
+        [MinLength(6), MaxLength(25)]
         public string Password { get; set; } = null!;
     }
 }
