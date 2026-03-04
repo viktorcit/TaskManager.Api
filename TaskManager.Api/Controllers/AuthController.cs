@@ -14,9 +14,9 @@ namespace TaskManager.Api.Controllers
     {
         private readonly AppDbContext _db;
         private readonly JwtService _jwtService;
-        private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
 
-        public AuthController(AppDbContext db, JwtService jwtService, IPasswordHasher<User> passwordHasher)
+        public AuthController(AppDbContext db, JwtService jwtService, IPasswordHasher<ApplicationUser> passwordHasher)
         {
             _passwordHasher = passwordHasher;
             _db = db;
@@ -40,7 +40,7 @@ namespace TaskManager.Api.Controllers
                 return Conflict("User already exists.");
             }
 
-            var user = new User
+            var user = new ApplicationUser
             {
                 Name = dto.Name,
                 Nickname = dto.Nickname,

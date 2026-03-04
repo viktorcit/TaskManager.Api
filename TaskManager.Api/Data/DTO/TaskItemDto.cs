@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TaskManager.Api.Model;
 
-namespace TaskManager.Api.Model
+namespace TaskManager.Api.Data.DTO
 {
-    public class TaskItem
+    public class TaskItemDto
     {
         public int Id { get; set; }
         [Required, MaxLength(100)]

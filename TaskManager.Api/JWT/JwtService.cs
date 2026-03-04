@@ -16,7 +16,7 @@ namespace TaskManager.Api.JWT
             _config = config;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(ApplicationUser user)
         {
             var secretKey = _config["Jwt:Key"];
             if (string.IsNullOrEmpty(secretKey))

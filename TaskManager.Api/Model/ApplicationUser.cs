@@ -1,11 +1,11 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace TaskManager.Api.Model
 {
-    public class User
+    public class ApplicationUser : IdentityUser
     {
-        public int Id { get; set; }
         [MinLength(2), MaxLength(20)]
         public string? Name { get; set; }
         [Required,MinLength(3), MaxLength(20)]
@@ -13,7 +13,5 @@ namespace TaskManager.Api.Model
         [Range(1, 100)]
         public int? Age { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        [Required, MinLength(6), MaxLength(25)]
-        public string PasswordHash { get; set; } = null!;
     }
 }
