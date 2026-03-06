@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TaskManager.Api.Data;
+using System.Security.Claims;
 using TaskManager.Api.Data.DTO;
 using TaskManager.Api.JWT;
 using TaskManager.Api.Model;
@@ -12,15 +12,21 @@ namespace TaskManager.Api.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly JwtService _jwtService;
-        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+        const string ROLE_USER = "User";
 
-        public AuthController(AppDbContext db, JwtService jwtService, IPasswordHasher<ApplicationUser> passwordHasher)
+        private readonly JwtService _jwtService;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
+        public AuthController(
+            JwtService jwtService,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager
+            )
         {
-            _passwordHasher = passwordHasher;
-            _db = db;
             _jwtService = jwtService;
+            _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [HttpPost("register")]
@@ -31,10 +37,12 @@ namespace TaskManager.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var normalizedNickname = dto.Nickname.ToLower();
-
-            var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Nickname.ToLower() == normalizedNickname);
-
+            var nickname = dto.Nickname?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(nickname))
+            {
+                return BadRequest("Nickname is required.");
+            }
+            var existingUser = await _userManager.FindByNameAsync(nickname);
             if (existingUser != null)
             {
                 return Conflict("User already exists.");
@@ -43,17 +51,27 @@ namespace TaskManager.Api.Controllers
             var user = new ApplicationUser
             {
                 Name = dto.Name,
-                Nickname = dto.Nickname,
+                UserName = nickname,
+                Nickname = nickname,
                 Age = dto.Age,
                 CreatedAt = DateTimeOffset.UtcNow
             };
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description).ToList();
+                return BadRequest(new { errors });
+            }
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
 
-            await _db.Users.AddAsync(user);
-            await _db.SaveChangesAsync();
+            var roleResult = await _userManager.AddToRoleAsync(user, ROLE_USER);
+            if (!roleResult.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+                return StatusCode(500, "Failed to assign role to the user.");
+            }
 
-            var token = _jwtService.GenerateToken(user);
+            var token =await GenerateToken(user);
 
             return Ok(new AuthResponseDto { Token = token });
         }
@@ -67,20 +85,49 @@ namespace TaskManager.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var normalizedNickname = dto.Nickname.ToLower();
+            var nickname = dto.Nickname?.Trim() ?? "";
+            if(string.IsNullOrWhiteSpace(nickname))
+            {
+                return BadRequest("Nickname is required.");
+            }
 
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Nickname.ToLower() == normalizedNickname);
+            var user = await _userManager.FindByNameAsync(nickname);
             if (user == null)
             {
                 return Unauthorized("Invalid nickname or password.");
             }
-            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
-            if (result == PasswordVerificationResult.Failed)
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
+            if (result.IsLockedOut)
+            {
+                return Forbid();
+            }
+            if (!result.Succeeded)
             {
                 return Unauthorized("Invalid nickname or password.");
             }
-            var token = _jwtService.GenerateToken(user);
+
+            var token = await GenerateToken(user);
+
             return Ok(new AuthResponseDto { Token = token });
+        }
+
+
+        private async Task<string> GenerateToken(ApplicationUser user)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.UserName ?? "")
+            };
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var token = _jwtService.GenerateToken(claims);
+            return token;
         }
     }
 }
+

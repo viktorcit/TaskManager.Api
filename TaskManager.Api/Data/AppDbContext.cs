@@ -4,11 +4,10 @@ using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Data
 {
-    public class AppDbContext : IdentityDbContext
+    public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public new DbSet<ApplicationUser> Users => Set<ApplicationUser>();
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -16,12 +15,15 @@ namespace TaskManager.Api.Data
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<ApplicationUser>(entity =>
             {
-                entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Age).IsRequired();
             });
 
-
+                modelBuilder.Entity<TaskItem>(entity =>
+                {
+                    entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                    entity.Property(e => e.Description).HasMaxLength(500);
+                });
         }
 
     }

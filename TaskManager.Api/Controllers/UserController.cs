@@ -33,9 +33,9 @@ namespace TaskManager.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserDto>> GetUserById(int id)
+        public async Task<ActionResult<UserDto>> GetUserById(Guid id)
         {
-            var user = await _db.Users.FindAsync(id);
+            var user = await _db.Users.FindAsync(id.ToString());
             if (user == null) return NotFound();
 
             var response = new UserDto
@@ -49,9 +49,9 @@ namespace TaskManager.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser(Guid id)
         {
-            var user = await _db.Users.FindAsync(id);
+            var user = await _db.Users.FindAsync(id.ToString());
 
             if (user == null) return NotFound();
 
