@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -9,7 +10,7 @@ using TaskManager.Api.Model;
 namespace TaskManager.Api.Controllers
 {
     [ApiController]
-    [Route("auth")]
+    [Route("account")]
     public class AuthController : ControllerBase
     {
         const string ROLE_USER = "User";
@@ -110,6 +111,15 @@ namespace TaskManager.Api.Controllers
 
             return Ok(new AuthResponseDto { Token = token });
         }
+
+
+        [Authorize]
+        [HttpPost("request-employer")]
+        public async Task<ActionResult<RequestEmployerDto>> RequestEmployer(RequestEmployerDto dto)
+        {
+            return dto;
+        }
+
 
 
         private async Task<string> GenerateToken(ApplicationUser user)

@@ -1,0 +1,13 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TaskManager.Api.Data.DTO
+{
+    public class RejectEmployerDto
+    {
+        [Required]
+        public int RequestId { get; set; }
+        [Required]
+        [MinLength(50), MaxLength(300)]
+        public string reason { get; set; } = null!;
+    }
+}

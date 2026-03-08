@@ -9,6 +9,8 @@ namespace TaskManager.Api.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
+        public DbSet<EmployerRequest> EmployerRequests => Set<EmployerRequest>();
+        public DbSet<EmployerProfile> EmployerProfiles => Set<EmployerProfile>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
