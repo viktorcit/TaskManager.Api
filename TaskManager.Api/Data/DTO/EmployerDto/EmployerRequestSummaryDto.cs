@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TaskManager.Api.Data.DTO
+namespace TaskManager.Api.Data.DTO.EmployerDto
 {
     public class EmployerRequestSummaryDto
     {

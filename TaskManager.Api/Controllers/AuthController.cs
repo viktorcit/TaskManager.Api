@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using TaskManager.Api.Data.DTO;
+using TaskManager.Api.Data;
+using TaskManager.Api.Data.DTO.EmployerDto;
+using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.JWT;
 using TaskManager.Api.Model;
 
@@ -13,22 +15,31 @@ namespace TaskManager.Api.Controllers
     [Route("account")]
     public class AuthController : ControllerBase
     {
-        const string ROLE_USER = "User";
 
         private readonly JwtService _jwtService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly AppDbContext _db;
 
         public AuthController(
             JwtService jwtService,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager
+            SignInManager<ApplicationUser> signInManager,
+            AppDbContext db
             )
         {
             _jwtService = jwtService;
             _userManager = userManager;
             _signInManager = signInManager;
+            _db = db;
         }
+
+
+
+        const string ROLE_USER = "User";
+        const string PENDING_STATUS = "Pending";
+
+
 
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponseDto>> Register(RegisterUserDto dto)
@@ -72,14 +83,14 @@ namespace TaskManager.Api.Controllers
                 return StatusCode(500, "Failed to assign role to the user.");
             }
 
-            var token =await GenerateToken(user);
+            var token = await GenerateToken(user);
 
             return Ok(new AuthResponseDto { Token = token });
         }
 
 
         [HttpPost("login")]
-        public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto)
+        public async Task<ActionResult<AuthResponseDto>> Login(LoginUserDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -87,7 +98,7 @@ namespace TaskManager.Api.Controllers
             }
 
             var nickname = dto.Nickname?.Trim() ?? "";
-            if(string.IsNullOrWhiteSpace(nickname))
+            if (string.IsNullOrWhiteSpace(nickname))
             {
                 return BadRequest("Nickname is required.");
             }
@@ -117,7 +128,29 @@ namespace TaskManager.Api.Controllers
         [HttpPost("request-employer")]
         public async Task<ActionResult<RequestEmployerDto>> RequestEmployer(RequestEmployerDto dto)
         {
-            return dto;
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var existPending = await _db.EmployerRequests
+                .FirstOrDefaultAsync(r => r.UserId == User.FindFirstValue(ClaimTypes.NameIdentifier));
+            if (existPending != null)
+            {
+                return BadRequest("You already have a pending employer request.");
+            }
+
+            var request = new EmployerRequest
+            {
+                CompanyName = dto.CompanyName,
+                Description = dto.Description,
+                Website = dto.Website,
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                Status = PENDING_STATUS,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            _db.EmployerRequests.Add(request);
+            await _db.SaveChangesAsync();
+
+            return Ok(new RequestEmployerResponseDto { Id = request.Id });
         }
 
 

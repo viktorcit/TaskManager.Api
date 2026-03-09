@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
-using TaskManager.Api.Data.DTO;
+using TaskManager.Api.Data.DTO.EmployerDto;
 
 namespace TaskManager.Api.Controllers
 {
@@ -26,12 +26,23 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("employer-requests")]
-        public async Task<ActionResult> GetPendingEmployerRequests()
+        public async Task<ActionResult<List<EmployerRequestSummaryDto>>> GetPendingEmployerRequests()
         {
             var pendingRequests = await _db.EmployerRequests
                 .Where(r => r.Status == PENDING)
                 .ToListAsync();
-            return Ok(pendingRequests);
+
+            var requestsResponse = pendingRequests.Select(r => new EmployerRequestSummaryDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                CompanyName = r.CompanyName,
+                CreatedAt = r.CreatedAt,
+                UpdatedAt = r.UpdatedAt,
+                Status = r.Status
+            }).ToList();
+
+            return Ok(requestsResponse);
         }
 
         [Authorize(Roles = "Admin")]
@@ -39,9 +50,20 @@ namespace TaskManager.Api.Controllers
         public async Task<ActionResult<RequestEmployerDto>> GetPendingRequestsById(int id)
         {
             var request = await _db.EmployerRequests
-                .Where(r => r.Status == PENDING)
-                .FirstOrDefaultAsync(r => r.Id == id);
-            return Ok(request);
+                .FirstOrDefaultAsync(r => r.Id == id || r.Status == PENDING);
+            if(request == null) return NotFound();
+
+            var requestResponse = new EmployerRequestSummaryDto
+            {
+                Id = request.Id,
+                UserId = request.UserId,
+                CompanyName = request.CompanyName,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt,
+                Status = request.Status
+            };
+
+            return Ok(requestResponse);
         }
 
         [Authorize(Roles = "Admin")]
@@ -50,6 +72,7 @@ namespace TaskManager.Api.Controllers
         {
             var request = await _db.EmployerRequests.FindAsync(id);
             if (request == null) return NotFound();
+            if(request.Status != PENDING) return BadRequest("Only pending requests can be approved.");
             request.Status = APPROVED;
             await _db.SaveChangesAsync();
             return Ok();

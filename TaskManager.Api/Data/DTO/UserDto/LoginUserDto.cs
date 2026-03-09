@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TaskManager.Api.Data.DTO
+namespace TaskManager.Api.Data.DTO.UserDto
 {
-    public class LoginDto
+    public class LoginUserDto
     {
         [Required, MaxLength(20)]
         public string Nickname { get; set; } = null!;

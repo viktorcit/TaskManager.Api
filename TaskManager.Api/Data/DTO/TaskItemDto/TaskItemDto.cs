@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using TaskManager.Api.Model;
 
-namespace TaskManager.Api.Data.DTO
+namespace TaskManager.Api.Data.DTO.TaskItemDto
 {
     public class TaskItemDto
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
-using TaskManager.Api.Data.DTO;
+using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Controllers
