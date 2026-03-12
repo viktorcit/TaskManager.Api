@@ -1,4 +1,4 @@
-﻿namespace TaskManager.Api.Data.DTO.EmployerDto
+﻿namespace TaskManager.Api.Data.DTO.UserDto
 {
     public class AuthResponseDto
     {

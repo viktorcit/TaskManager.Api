@@ -16,5 +16,13 @@ namespace TaskManager.Api.Model
         public string Description { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? UpdatedAt { get; set; }
+
+        public void UpdateFromRequest(EmployerRequest request)
+        {
+            CompanyName = request.CompanyName;
+            Website = request.Website;
+            Description = request.Description;
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
     }
 }
