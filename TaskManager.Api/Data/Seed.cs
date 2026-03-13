@@ -18,7 +18,7 @@ namespace TaskManager.Api.Data
             }
 
             var adminLoginName = "barabolya2077";
-            var adminPassword = "admin7720";
+            var adminPassword = "!Admin7720!";
 
             var existingUser = await userManager.FindByNameAsync(adminLoginName);
 
@@ -26,17 +26,25 @@ namespace TaskManager.Api.Data
             {
                 var admin = new ApplicationUser
                 {
+                    Nickname = adminLoginName,
                     UserName = adminLoginName,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    Nickname = "admin"
+                    Name = "Admin",
+                    CreatedAt = DateTimeOffset.UtcNow
                 };
 
                 var result = await userManager.CreateAsync(admin, adminPassword);
+                if (!result.Succeeded)
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        Console.WriteLine($"Error creating admin user: {error.Description}");
+                    }
+                }
 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(admin, "Admin");
-                }   
+                }
             }
         }
     }

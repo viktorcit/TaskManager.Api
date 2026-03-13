@@ -23,6 +23,6 @@ namespace TaskManager.Api.Model
         public DateTimeOffset? UpdatedAt { get; set; }
         public string? ReviewedBy { get; set; } = null!;
         public DateTimeOffset? ReviewedAt { get; set; }
-        public string AdminComment { get; set; } = null!;
+        public string? AdminComment { get; set; } = null!;
     }
 }

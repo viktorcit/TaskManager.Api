@@ -18,7 +18,7 @@ namespace TaskManager.Api.Data
             modelBuilder.Entity<ApplicationUser>(entity =>
             {
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(20);
-                entity.Property(e => e.Age).IsRequired();
+                entity.Property(e => e.Age);
             });
 
                 modelBuilder.Entity<TaskItem>(entity =>
