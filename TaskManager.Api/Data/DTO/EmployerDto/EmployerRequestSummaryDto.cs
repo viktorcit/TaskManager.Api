@@ -12,5 +12,6 @@ namespace TaskManager.Api.Data.DTO.EmployerDto
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? UpdatedAt { get; set; }
         public string Status { get; set; } = null!;
+        public string Description { get; set; } = null!;
     }
 }

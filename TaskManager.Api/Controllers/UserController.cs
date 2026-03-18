@@ -2,12 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.UserDto;
-using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Controllers
 {
     [ApiController]
-    [Route("/users")]
+    [Route("users")]
     public class UserController : ControllerBase
     {
         public readonly AppDbContext _db;

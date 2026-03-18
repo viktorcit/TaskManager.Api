@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace TaskManager.Api.Model
@@ -13,5 +12,7 @@ namespace TaskManager.Api.Model
         [Range(1, 100)]
         public int? Age { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public List<TaskItem>? Tasks { get; set; }
+        public List<TaskItem> PerformerTasks { get; set; } = new();
     }
 }

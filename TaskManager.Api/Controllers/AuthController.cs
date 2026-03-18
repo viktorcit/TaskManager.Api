@@ -137,12 +137,18 @@ namespace TaskManager.Api.Controllers
                 return BadRequest("You already have a pending employer request.");
             }
 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if(User.Identity == null || userId == null)
+            {
+                return Unauthorized();
+            }
+
             var request = new EmployerRequest
             {
                 CompanyName = dto.CompanyName,
                 Description = dto.Description,
                 Website = dto.Website,
-                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                UserId = userId,
                 Status = PENDING_STATUS,
                 CreatedAt = DateTimeOffset.UtcNow
             };

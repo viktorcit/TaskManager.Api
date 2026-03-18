@@ -68,7 +68,8 @@ namespace TaskManager.Api.Controllers
                 CompanyName = request.CompanyName,
                 CreatedAt = request.CreatedAt,
                 UpdatedAt = request.UpdatedAt,
-                Status = request.Status
+                Status = request.Status,
+                Description = request.Description
             };
 
             return Ok(requestResponse);
