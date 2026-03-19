@@ -18,7 +18,10 @@ namespace TaskManager.Api.Model
         public bool CanAnyoneJoin { get; set; }
         [Required]
         public string OwnerId { get; set; } = null!;
+        [Required]
         public ApplicationUser Owner { get; set; } = null!;
+        [Required]
+        public string OwnerUsername { get; set; } = null!;
         public List<ApplicationUser> Performers { get; set; } = new();
         public List<string> PerfomersId { get; set; } = new();
     }

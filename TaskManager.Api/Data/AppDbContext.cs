@@ -11,6 +11,7 @@ namespace TaskManager.Api.Data
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
         public DbSet<EmployerRequest> EmployerRequests => Set<EmployerRequest>();
         public DbSet<EmployerProfile> EmployerProfiles => Set<EmployerProfile>();
+        public DbSet<JoinToTaskRequest> JoinToTaskRequests => Set<JoinToTaskRequest>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,11 +22,21 @@ namespace TaskManager.Api.Data
                 entity.Property(e => e.Age);
             });
 
-                modelBuilder.Entity<TaskItem>(entity =>
-                {
-                    entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
-                    entity.Property(e => e.Description).HasMaxLength(500);
-                });
+            modelBuilder.Entity<TaskItem>(entity =>
+            {
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+            });
+            modelBuilder.Entity<TaskItem>()
+                .HasMany(t => t.Performers)
+                .WithMany(u => u.PerformerTasks)
+                .UsingEntity(j => j.ToTable("TaskPerformers"));
+
+            modelBuilder.Entity<TaskItem>()
+                .HasOne(t => t.Owner)
+                .WithMany(u => u.OwnerTasks)
+                .HasForeignKey(t => t.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
     }

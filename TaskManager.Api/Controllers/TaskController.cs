@@ -6,6 +6,7 @@ using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
 using System.Security.Claims;
+using static TaskManager.Api.Model.JoinToTaskRequest;
 
 namespace TaskManager.Api.Controllers
 {
@@ -37,7 +38,7 @@ namespace TaskManager.Api.Controllers
             {
                 Id = t.Id,
                 Title = t.Title,
-                Owner = t.Owner,
+                OwnerUsername = t.OwnerUsername,
                 OwnerId = t.OwnerId,
                 CreatedAt = t.CreatedAt
             }).ToList();
@@ -60,7 +61,7 @@ namespace TaskManager.Api.Controllers
             {
                 Id = id,
                 Title = task.Title,
-                Owner = task.Owner,
+                OwnerUsername = task.OwnerUsername,
                 OwnerId = task.OwnerId,
                 CreatedAt = task.CreatedAt
             };
@@ -79,7 +80,7 @@ namespace TaskManager.Api.Controllers
                 return BadRequest(ModelState);
             }
             var owner = await _userManager.GetUserAsync(User);
-            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var ownerId = _userManager.GetUserId(User);
             if (owner == null || ownerId == null)
             {
                 return Unauthorized();
@@ -93,10 +94,17 @@ namespace TaskManager.Api.Controllers
                 return BadRequest("One or more performers not found.");
             }
 
+            var ownerUsername = owner.UserName;
+            if (ownerUsername == null)
+            {
+                return BadRequest("Owner username not found.");
+            }
+
             var task = new TaskItem
             {
                 Owner = owner,
                 OwnerId = ownerId,
+                OwnerUsername = ownerUsername,
                 Title = dto.Title,
                 Description = dto.Description,
                 DueDate = dto.DueDate,
@@ -105,8 +113,6 @@ namespace TaskManager.Api.Controllers
                 Status = Model.TaskStatus.InProgress,
                 Performers = performers.ToList(),
             };
-
-
 
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
@@ -120,7 +126,7 @@ namespace TaskManager.Api.Controllers
                 CreatedAt = task.CreatedAt,
                 Status = task.Status,
                 OwnerId = task.OwnerId,
-                Owner = task.Owner,
+                OwnerUsername = task.OwnerUsername,
                 Performers = task.Performers.ToList()
             };
 
@@ -148,10 +154,10 @@ namespace TaskManager.Api.Controllers
         }
 
         [Authorize]
-        [HttpGet("my-task")]
+        [HttpGet("my-tasks")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserTasks()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = _userManager.GetUserId(User);
             if (userId == null)
             {
                 return Unauthorized();
@@ -161,22 +167,22 @@ namespace TaskManager.Api.Controllers
                 .ToListAsync();
             if (userTasks.Count == 0)
             {
-                return NotFound("You have no tasks.");
+                return Ok(new List<TaskItemSummaryDto>());
             }
 
             var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
             {
                 Title = t.Title,
-                Owner = t.Owner,
+                OwnerUsername = t.OwnerUsername,
             }).ToList();
             return Ok(responseTasks);
         }
 
         [Authorize]
-        [HttpPost("/my-created-tasks")]
+        [HttpGet("my-created-tasks")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserCreatedTasks()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = _userManager.GetUserId(User);
             if (userId == null)
             {
                 return Unauthorized();
@@ -191,9 +197,76 @@ namespace TaskManager.Api.Controllers
             var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
             {
                 Title = t.Title,
-                Owner = t.Owner,
+                OwnerUsername = t.OwnerUsername,
             }).ToList();
             return Ok(responseTasks);
+        }
+
+
+        [Authorize]
+        [HttpPost("{id}/join")]
+        public async Task<ActionResult> JoinTask([FromRoute(Name = "id")] int taskId)
+        {
+            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+            if (task == null)
+            {
+                return NotFound("Task not found.");
+            }
+            if (!task.CanAnyoneJoin)
+            {
+                return BadRequest("This task is not open for joining. Create request for join.");
+            }
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null || userId == null)
+            {
+                return Unauthorized();
+            }
+            if (task.Performers.Any(p => p.Id == userId))
+            {
+                return BadRequest("You are already a performer of this task.");
+            }
+
+            task.Performers.Add(user);
+            task.PerfomersId.Add(userId);
+            await _db.SaveChangesAsync();
+
+            return Ok("You have successfully joined the task.");
+        }
+
+        [Authorize]
+        [HttpPost("{id}/join-request")]
+        public async Task<ActionResult> RequestToJoinTask([FromRoute(Name = "id")] int taskId)
+        {
+            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
+            if (task == null)
+            {
+                return NotFound("Task not found.");
+            }
+            if (task.CanAnyoneJoin)
+            {
+                return BadRequest("This task is open for joining. Just joining.");
+            }
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null || userId == null)
+            {
+                return Unauthorized();
+            }
+            if (task.Performers.Any(p => p.Id == userId))
+            {
+                return BadRequest("You are already a performer of this task.");
+            }
+            var joinRequest = new JoinToTaskRequest
+            {
+                TaskId = taskId,
+                UserId = userId,
+                Status = JoinRequestStatus.Pending,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _db.JoinToTaskRequests.Add(joinRequest);
+            await _db.SaveChangesAsync();
+            return Ok("Your request to join the task has been sent to the owner.");
         }
     }
 }

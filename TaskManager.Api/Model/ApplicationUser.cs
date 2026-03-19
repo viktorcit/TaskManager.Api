@@ -12,7 +12,7 @@ namespace TaskManager.Api.Model
         [Range(1, 100)]
         public int? Age { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        public List<TaskItem>? Tasks { get; set; }
+        public List<TaskItem>? OwnerTasks { get; set; }
         public List<TaskItem> PerformerTasks { get; set; } = new();
     }
 }

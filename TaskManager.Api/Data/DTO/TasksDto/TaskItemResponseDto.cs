@@ -15,7 +15,7 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         public DateTimeOffset? CompletedAt { get; set; }
         public bool CanAnyoneJoin { get; set; }
         public string OwnerId { get; set; } = null!;
-        public ApplicationUser Owner { get; set; } = null!;
+        public string OwnerUsername { get; set; } = null!;
         public List<ApplicationUser> Performers { get; set; } = new();
     }
 }
