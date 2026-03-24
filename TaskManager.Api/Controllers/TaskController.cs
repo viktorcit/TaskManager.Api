@@ -7,6 +7,7 @@ using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
 using System.Security.Claims;
 using static TaskManager.Api.Model.JoinToTaskRequest;
+using TaskManager.Api.Data.DTO.JoinDto;
 
 namespace TaskManager.Api.Controllers
 {
@@ -72,7 +73,7 @@ namespace TaskManager.Api.Controllers
 
 
         [Authorize(Roles = "Employer")]
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<ActionResult<TaskItemDto>> CreateTask(CreateTaskDto dto)
         {
             if (!ModelState.IsValid)
@@ -134,7 +135,7 @@ namespace TaskManager.Api.Controllers
         }
 
 
-        [HttpDelete("{id}")]
+        [HttpDelete("delete/{id}")]
         public async Task<ActionResult> DeleteTask(int id)
         {
             var task = await _db.Tasks.FindAsync(id);
@@ -153,33 +154,8 @@ namespace TaskManager.Api.Controllers
             return NoContent();
         }
 
-        [Authorize]
-        [HttpGet("my-tasks")]
-        public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserTasks()
-        {
-            var userId = _userManager.GetUserId(User);
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-            var userTasks = await _db.Tasks
-                .Where(t => t.Performers.Any(p => p.Id == userId))
-                .ToListAsync();
-            if (userTasks.Count == 0)
-            {
-                return Ok(new List<TaskItemSummaryDto>());
-            }
-
-            var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
-            {
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-            }).ToList();
-            return Ok(responseTasks);
-        }
-
-        [Authorize]
-        [HttpGet("my-created-tasks")]
+        [Authorize(Roles = "Employer")]
+        [HttpGet("my-created")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserCreatedTasks()
         {
             var userId = _userManager.GetUserId(User);
@@ -196,6 +172,7 @@ namespace TaskManager.Api.Controllers
             }
             var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
             {
+                Id = t.Id,
                 Title = t.Title,
                 OwnerUsername = t.OwnerUsername,
             }).ToList();
@@ -204,7 +181,7 @@ namespace TaskManager.Api.Controllers
 
 
         [Authorize]
-        [HttpPost("{id}/join")]
+        [HttpPost("join/{id}")]
         public async Task<ActionResult> JoinTask([FromRoute(Name = "id")] int taskId)
         {
             var userId = _userManager.GetUserId(User);
@@ -223,7 +200,7 @@ namespace TaskManager.Api.Controllers
             {
                 return NotFound("Task not found.");
             }
-            if (!task.CanAnyoneJoin)
+            if (task.CanAnyoneJoin == false)
             {
                 return BadRequest("This task is not open for joining. Create request for join.");
             }
@@ -239,8 +216,8 @@ namespace TaskManager.Api.Controllers
         }
 
         [Authorize]
-        [HttpPost("{id}/join-request")]
-        public async Task<ActionResult> RequestToJoinTask([FromRoute(Name = "id")] int taskId, JoinToTaskRequest dto)
+        [HttpPost("join-request/{id}")]
+        public async Task<ActionResult> RequestToJoinTask([FromRoute(Name = "id")] int taskId, JoinToTaskRequestDto dto)
         {
             if(!ModelState.IsValid)
             {
@@ -262,7 +239,7 @@ namespace TaskManager.Api.Controllers
             {
                 return NotFound("Task not found.");
             }
-            if (task.CanAnyoneJoin)
+            if (task.CanAnyoneJoin == false)
             {
                 return BadRequest("This task is open for joining. Just joining.");
             }

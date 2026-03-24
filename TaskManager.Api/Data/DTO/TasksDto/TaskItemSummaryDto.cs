@@ -9,6 +9,5 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         public string OwnerId { get; set; } = null!;
         public string OwnerUsername { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-
     }
 }

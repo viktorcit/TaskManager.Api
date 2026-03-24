@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.JoinToTaskDto;
+using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Controllers

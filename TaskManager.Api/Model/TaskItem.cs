@@ -15,7 +15,7 @@ namespace TaskManager.Api.Model
         public TaskStatus Status { get; set; } = TaskStatus.InProgress;
         public DateTimeOffset? CompletedAt { get; set; }
         [Required]
-        public bool CanAnyoneJoin { get; set; }
+        public bool? CanAnyoneJoin { get; set; }
         [Required]
         public string OwnerId { get; set; } = null!;
         [Required]

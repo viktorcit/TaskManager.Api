@@ -7,11 +7,12 @@ namespace TaskManager.Api.Data.DTO.TasksDto
     {
         [Required, MaxLength(100)]
         public string Title { get; set; } = null!;
-        [MaxLength(300)]
+        [Required, MaxLength(300)]
         public string? Description { get; set; }
+        [Required]
         public DateTimeOffset? DueDate { get; set; }
         [Required]
-        public bool CanAnyoneJoin { get; set; }
+        public bool? CanAnyoneJoin { get; set; }
         public List<string> PerformersId { get; set; } = new();
     }
 }
