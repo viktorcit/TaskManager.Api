@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Model;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TaskManager.Api.Controllers
 {
@@ -21,12 +22,13 @@ namespace TaskManager.Api.Controllers
             _userManager = userManager;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<ActionResult<UserDto>> GetUsers()
+        public async Task<ActionResult<AdminUserDto>> GetUsers()
         {
             var users = await _userManager.Users.ToListAsync();
 
-            var response = users.Select(u => new UserDto
+            var response = users.Select(u => new AdminUserDto
             {
                 Id = u.Id,
                 Name = u.Name,
@@ -39,16 +41,17 @@ namespace TaskManager.Api.Controllers
             return Ok(response);
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserDto>> GetUserById(Guid id)
+        public async Task<ActionResult<AdminUserDto>> GetUserById(Guid id)
         {
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id.ToString());
             if (user == null) return NotFound();
 
-            user.PerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id)).ToListAsync();
+            var userPerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id)).ToListAsync();
+            var userOwnerTasks = await _db.Tasks.Where(t => t.Owner.Id == user.Id).ToListAsync();
 
-            var response = new UserDto
+            var response = new AdminUserDto
             {
                 Id = user.Id,
                 Name = user.Name,
@@ -56,7 +59,8 @@ namespace TaskManager.Api.Controllers
                 UserName = user.UserName,
                 Age = user.Age,
                 CreatedAt = user.CreatedAt,
-                PerformerTasks = user.PerformerTasks
+                PerformerTasks = userPerformerTasks,
+                OwnerTasks = userOwnerTasks,
             };
 
             return Ok(response);
@@ -68,7 +72,6 @@ namespace TaskManager.Api.Controllers
         public async Task<IActionResult> DeleteUser(Guid id)
         {
             var user = await _db.Users.FindAsync(id.ToString());
-
             if (user == null) return NotFound();
 
             _db.Users.Remove(user);
@@ -77,17 +80,22 @@ namespace TaskManager.Api.Controllers
             return NoContent();
         }
 
-        [Authorize]
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(Guid id, UpdateUserDto dto)
+        
+        [Authorize(Roles = "Admin")]
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> UpdateUser(Guid id, AdminUpdateUserDto dto)
         {
             var user = await _db.Users.FindAsync(id.ToString());
             if (user == null) return NotFound();
-            user.Name = dto.Name;
-            user.Age = dto.Age;
-            _db.Users.Update(user);
+
+            if (dto.Name != null)
+                user.Name = dto.Name;
+            if (dto.Age != null)
+                user.Age = dto.Age;
+            if(dto.Nickname != null)
+                user.Nickname = dto.Nickname;
             await _db.SaveChangesAsync();
-            return Ok("Data of user updated");
+            return Ok($"Data of user {id} updated");
         }
     }
 }

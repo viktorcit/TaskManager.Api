@@ -48,6 +48,7 @@ namespace TaskManager.Api.Controllers
         }
 
 
+        //Get
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItemDto>> GetTasksInProgressById(int id)
         {
@@ -71,7 +72,96 @@ namespace TaskManager.Api.Controllers
         }
 
 
+        [Authorize(Roles = "Employer")]
+        [HttpGet("my-created")]
+        public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserCreatedTasks()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var userTasks = await _db.Tasks
+                .Where(t => t.OwnerId == userId)
+                .ToListAsync();
+            if (userTasks.Count == 0)
+            {
+                return NotFound("You have no created tasks.");
+            }
+            var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                OwnerUsername = t.OwnerUsername,
+            }).ToList();
+            return Ok(responseTasks);
+        }
 
+        [Authorize]
+        [HttpGet("my-performing")]
+        public async Task<ActionResult<TaskItemSummaryDto>> GetTasksOfPerfomer()
+        {
+            var performer = await _userManager.GetUserAsync(User);
+            if (performer == null)
+            {
+                return NotFound();
+            }
+            var isInRole = await _userManager.IsInRoleAsync(performer, "Employer");
+            if (isInRole)
+            {
+                return Forbid("Only a regular user can access their tasks.");
+            }
+            var tasks = _db.Tasks.Where(t => t.Performers.Contains(performer)).ToList();
+            if (tasks.Count == 0)
+            {
+                return NotFound("You have no tasks!");
+            }
+
+            var responseTasks = tasks.Select(t => new TaskItemSummaryDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                OwnerUsername = t.OwnerUsername,
+                OwnerId = t.OwnerId,
+                CreatedAt = t.CreatedAt
+            }).ToList();
+
+            return Ok(responseTasks);
+        }
+
+        [Authorize]
+        [HttpGet("task/{id}")]
+        public async Task<ActionResult<TaskItemDto>> GetTasksOfPerfomerById(int id)
+        {
+            var performer = await _userManager.GetUserAsync(User);
+            if (performer == null)
+            {
+                return NotFound();
+            }
+            var isInRole = await _userManager.IsInRoleAsync(performer, "Employer");
+            if (isInRole)
+            {
+                return Forbid("Only a regular user can access their tasks.");
+            }
+            var task = _db.Tasks.FirstOrDefault(t => t.Id == id && t.Performers.Contains(performer));
+            if (task == null)
+            {
+                return NotFound();
+            }
+            var responseTask = new TaskItemDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                OwnerUsername = task.OwnerUsername,
+                OwnerId = task.OwnerId,
+                CreatedAt = task.CreatedAt
+            };
+            return Ok(responseTask);
+        }
+
+
+        //Post
         [Authorize(Roles = "Employer")]
         [HttpPost("create")]
         public async Task<ActionResult<TaskItemDto>> CreateTask(CreateTaskDto dto)
@@ -134,52 +224,7 @@ namespace TaskManager.Api.Controllers
             return Ok(responseTask);
         }
 
-
-        [HttpDelete("delete/{id}")]
-        public async Task<ActionResult> DeleteTask(int id)
-        {
-            var task = await _db.Tasks.FindAsync(id);
-            if (task == null)
-            {
-                return NotFound();
-            }
-            var ownerTaskId = task.OwnerId;
-            if (ownerTaskId != User.FindFirstValue(ClaimTypes.NameIdentifier))
-            {
-                return Forbid("You can`t delete not yours task.");
-            }
-
-            _db.Tasks.Remove(task);
-            await _db.SaveChangesAsync();
-            return NoContent();
-        }
-
-        [Authorize(Roles = "Employer")]
-        [HttpGet("my-created")]
-        public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserCreatedTasks()
-        {
-            var userId = _userManager.GetUserId(User);
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-            var userTasks = await _db.Tasks
-                .Where(t => t.OwnerId == userId)
-                .ToListAsync();
-            if (userTasks.Count == 0)
-            {
-                return NotFound("You have no created tasks.");
-            }
-            var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-            }).ToList();
-            return Ok(responseTasks);
-        }
-
-
+        
         [Authorize]
         [HttpPost("join/{id}")]
         public async Task<ActionResult> JoinTask([FromRoute(Name = "id")] int taskId)
@@ -268,6 +313,26 @@ namespace TaskManager.Api.Controllers
             await _db.SaveChangesAsync();
 
             return Ok("Your request to join the task has been sent to the owner.");
+        }
+
+        //Delete
+        [HttpDelete("delete/{id}")]
+        public async Task<ActionResult> DeleteTask(int id)
+        {
+            var task = await _db.Tasks.FindAsync(id);
+            if (task == null)
+            {
+                return NotFound();
+            }
+            var ownerTaskId = task.OwnerId;
+            if (ownerTaskId != User.FindFirstValue(ClaimTypes.NameIdentifier))
+            {
+                return Forbid("You can`t delete not yours task.");
+            }
+
+            _db.Tasks.Remove(task);
+            await _db.SaveChangesAsync();
+            return NoContent();
         }
     }
 }
