@@ -31,7 +31,7 @@ namespace TaskManager.Api.Services
             return profile;
         }
 
-        public async Task<EmployerProfile?> GetProfileByUserId(string userId)
+        public async Task<EmployerProfile?> GetProfileByUserIdAsync(string userId)
         {
             var profile = await _db.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
             if (profile == null) return null;

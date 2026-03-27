@@ -16,7 +16,7 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         public Model.TaskStatus Status { get; set; }
         public DateTimeOffset? CompletedAt { get; set; }
         [Required]
-        public bool CanAnyoneJoin { get; set; }
+        public bool? CanAnyoneJoin { get; set; }
         [Required]
         public string OwnerId { get; set; } = null!;
         [Required]

@@ -42,7 +42,7 @@ namespace TaskManager.Api.Controllers
 
 
         [HttpPost("register")]
-        public async Task<ActionResult<AuthResponseDto>> Register(RegisterUserDto dto)
+        public async Task<ActionResult<AuthResponseDto>> RegisterAsync(RegisterUserDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -83,14 +83,14 @@ namespace TaskManager.Api.Controllers
                 return StatusCode(500, "Failed to assign role to the user.");
             }
 
-            var token = await GenerateToken(user);
+            var token = await GenerateTokenAsync(user);
 
             return Ok(new AuthResponseDto { Token = token });
         }
 
 
         [HttpPost("login")]
-        public async Task<ActionResult<AuthResponseDto>> Login(LoginUserDto dto)
+        public async Task<ActionResult<AuthResponseDto>> LoginAsync(LoginUserDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -118,7 +118,7 @@ namespace TaskManager.Api.Controllers
                 return Unauthorized("Invalid nickname or password.");
             }
 
-            var token = await GenerateToken(user);
+            var token = await GenerateTokenAsync(user);
 
             return Ok(new AuthResponseDto { Token = token });
         }
@@ -126,7 +126,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpPost("request-employer")]
-        public async Task<ActionResult<RequestEmployerDto>> RequestEmployer(RequestEmployerDto dto)
+        public async Task<ActionResult<RequestEmployerDto>> RequestEmployerAsync(RequestEmployerDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -161,7 +161,7 @@ namespace TaskManager.Api.Controllers
 
 
 
-        private async Task<string> GenerateToken(ApplicationUser user)
+        private async Task<string> GenerateTokenAsync(ApplicationUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
             var claims = new List<Claim>

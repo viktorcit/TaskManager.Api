@@ -27,7 +27,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PublicProfileDto>>> GetAllProfiles(int page = 1, int pageSize = 20)
+        public async Task<ActionResult<IEnumerable<PublicProfileDto>>> GetAllProfilesAsync(int page = 1, int pageSize = 20)
         {
             var profiles = await _userManager.Users
                 .Skip((page - 1) * pageSize)
@@ -46,7 +46,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpGet("{nickname}")]
-        public async Task<ActionResult<PublicProfileDto>> GetProfileOfUser(string nickname)
+        public async Task<ActionResult<PublicProfileDto>> GetProfileOfUserAsync(string nickname)
         {
             var findUser = await _userManager.Users.FirstOrDefaultAsync(u => u.Nickname.ToLower() == nickname.ToLower());
             if(findUser == null) return NotFound("User not found");
@@ -62,7 +62,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpGet("my")]
-        public async Task<ActionResult<PrivateProfileDto>> GetProfile()
+        public async Task<ActionResult<PrivateProfileDto>> GetProfileAsync()
         {
             var userId = _userManager.GetUserId(User);
             var user = await _userManager.GetUserAsync(User);
@@ -95,7 +95,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpDelete]
-        public async Task<IActionResult> DeleteProfile()
+        public async Task<IActionResult> DeleteProfileAsync()
         {
             var profile = await _userManager.GetUserAsync(User);
             if (profile == null) return Unauthorized();
@@ -107,7 +107,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize]
         [HttpPatch]
-        public async Task<IActionResult> UpdateProfile(UpdateProfileDto dto)
+        public async Task<IActionResult> UpdateProfileAsync(UpdateProfileDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var userId = _userManager.GetUserId(User);

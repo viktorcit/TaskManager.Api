@@ -4,20 +4,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.JoinToTaskDto;
-using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Controllers
 {
     [ApiController]
-    [Route("owner")]
-    public class OwnerController : ControllerBase
+    [Route("request-to-join")]
+    public class RequestToJoinController : ControllerBase
     {
         private readonly AppDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
 
 
-        public OwnerController(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public RequestToJoinController(AppDbContext db, UserManager<ApplicationUser> userManager)
         {
             _db = db;
             _userManager = userManager;
@@ -26,7 +25,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpGet("requests-join-to-task")]
-        public async Task<ActionResult<List<JoinToTaskRequestSummaryDto>>> GetJoinToTaskRequests()
+        public async Task<ActionResult<List<JoinToTaskRequestSummaryDto>>> GetJoinToTaskRequestsAsync()
         {
             var ownerId = _userManager.GetUserId(User);
             var tasks = await _db.Tasks
@@ -55,7 +54,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpGet("requests-join-to-task/{id}")]
-        public async Task<ActionResult<JoinToTaskRequestSummaryDto>> GetJoinToTaskRequestById(int id)
+        public async Task<ActionResult<JoinToTaskRequestSummaryDto>> GetJoinToTaskRequestByIdAsync(int id)
         {
             var ownerId = _userManager.GetUserId(User);
             if (ownerId == null)
@@ -86,7 +85,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpPost("requests-join-to-task/{id}/approve")]
-        public async Task<ActionResult> ApproveJoinToTaskRequest(int id)
+        public async Task<ActionResult> ApproveJoinToTaskRequestAsync(int id)
         {
             var ownerId = _userManager.GetUserId(User);
             if (ownerId == null)
@@ -135,7 +134,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpPost("requests-join-to-task/{id}/reject")]
-        public async Task<ActionResult> RejectJoinToTaskRequest(int id)
+        public async Task<ActionResult> RejectJoinToTaskRequestAsync(int id)
         {
             var ownerId = _userManager.GetUserId(User);
             if (ownerId == null)

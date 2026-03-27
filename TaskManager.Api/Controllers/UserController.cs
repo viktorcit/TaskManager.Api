@@ -43,7 +43,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
-        public async Task<ActionResult<AdminUserDto>> GetUserById(Guid id)
+        public async Task<ActionResult<AdminUserDto>> GetUserByIdAsync(Guid id)
         {
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id.ToString());
             if (user == null) return NotFound();
@@ -69,7 +69,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(Guid id)
+        public async Task<IActionResult> DeleteUserAsync(Guid id)
         {
             var user = await _db.Users.FindAsync(id.ToString());
             if (user == null) return NotFound();
@@ -83,7 +83,7 @@ namespace TaskManager.Api.Controllers
         
         [Authorize(Roles = "Admin")]
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdateUser(Guid id, AdminUpdateUserDto dto)
+        public async Task<IActionResult> UpdateUserAsync(Guid id, AdminUpdateUserDto dto)
         {
             var user = await _db.Users.FindAsync(id.ToString());
             if (user == null) return NotFound();

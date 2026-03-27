@@ -34,7 +34,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("employer-requests")]
-        public async Task<ActionResult<List<EmployerRequestSummaryDto>>> GetPendingEmployerRequests()
+        public async Task<ActionResult<List<EmployerRequestSummaryDto>>> GetPendingEmployerRequestsAsync()
         {
             var pendingRequests = await _db.EmployerRequests
                 .Where(r => r.Status == PENDING)
@@ -55,7 +55,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("employer-requests/{id}")]
-        public async Task<ActionResult<EmployerRequestSummaryDto>> GetPendingRequestsById(int id)
+        public async Task<ActionResult<EmployerRequestSummaryDto>> GetPendingRequestsByIdAsync(int id)
         {
             var request = await _db.EmployerRequests
                 .FirstOrDefaultAsync(r => r.Id == id && r.Status == PENDING);
@@ -77,7 +77,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost("employer-requests/{id}/approve")]
-        public async Task<ActionResult<ApproveEmployerDto>> ApproveEmployerRequest([FromRoute(Name = "id")] int requestId, ApproveEmployerDto dto)
+        public async Task<ActionResult<ApproveEmployerDto>> ApproveEmployerRequestAsync([FromRoute(Name = "id")] int requestId, ApproveEmployerDto dto)
         {
             var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var request = await _db.EmployerRequests.FindAsync(requestId);
@@ -111,7 +111,7 @@ namespace TaskManager.Api.Controllers
 
             try
             {
-                var existingProfile = await _profileService.GetProfileByUserId(user.Id);
+                var existingProfile = await _profileService.GetProfileByUserIdAsync(user.Id);
                 if (existingProfile == null)
                 {
                     var profile = _profileService.CreateProfile(user.Id, new EmployerRequest
@@ -165,7 +165,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost("employer-requests/{id}/reject")]
-        public async Task<ActionResult<RejectEmployerDto>> RejectEmployerRequest(int id, RejectEmployerDto dto)
+        public async Task<ActionResult<RejectEmployerDto>> RejectEmployerRequestAsync(int id, RejectEmployerDto dto)
         {
             var request = await _db.EmployerRequests.FindAsync(id);
             if (request == null) return NotFound();
