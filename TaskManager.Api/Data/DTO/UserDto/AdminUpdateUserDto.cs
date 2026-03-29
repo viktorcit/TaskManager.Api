@@ -2,7 +2,7 @@
 
 namespace TaskManager.Api.Data.DTO.UserDto
 {
-    public class AdminUpdateUserDto : IdentityUser
+    public class AdminUpdateUserDto
     {
         public string? Name { get; set; }
         public string Nickname { get; set; } = null!;

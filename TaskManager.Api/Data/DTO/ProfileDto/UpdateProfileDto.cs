@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TaskManager.Api.Data.DTO.ProfileDto
 {
-    public class UpdateProfileDto : IdentityUser
+    public class UpdateProfileDto
     {
         [MinLength(2), MaxLength(20)]
         public string? Name { get; set; }

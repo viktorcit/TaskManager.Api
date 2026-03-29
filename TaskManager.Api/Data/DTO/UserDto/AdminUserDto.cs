@@ -4,8 +4,9 @@ using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Data.DTO.UserDto
 {
-    public class AdminUserDto : IdentityUser
+    public class AdminUserDto
     {
+        public string Id { get; set; } = null!;
         [MinLength(2), MaxLength(20)]
         public string? Name { get; set; }
         [Required, MinLength(3), MaxLength(20)]

@@ -33,7 +33,6 @@ namespace TaskManager.Api.Controllers
                 Id = u.Id,
                 Name = u.Name,
                 Nickname = u.Nickname,
-                UserName = u.UserName,
                 Age = u.Age,
                 CreatedAt = u.CreatedAt,
             }).ToList();
@@ -56,7 +55,6 @@ namespace TaskManager.Api.Controllers
                 Id = user.Id,
                 Name = user.Name,
                 Nickname = user.Nickname,
-                UserName = user.UserName,
                 Age = user.Age,
                 CreatedAt = user.CreatedAt,
                 PerformerTasks = userPerformerTasks,
