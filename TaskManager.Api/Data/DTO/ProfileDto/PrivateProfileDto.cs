@@ -1,4 +1,4 @@
-﻿using TaskManager.Api.Model;
+﻿using TaskManager.Api.Data.DTO.TasksDto;
 
 namespace TaskManager.Api.Data.DTO.ProfileDto
 {
@@ -9,7 +9,7 @@ namespace TaskManager.Api.Data.DTO.ProfileDto
         public string Nickname { get; set; } = null!;
         public int? Age { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        public List<TaskItem>? OwnerTasks { get; set; }
-        public List<TaskItem> PerformerTasks { get; set; } = new();
+        public List<TaskItemShortDto>? OwnerTasks { get; set; }
+        public List<TaskItemShortDto> PerformerTasks { get; set; } = new();
     }
 }

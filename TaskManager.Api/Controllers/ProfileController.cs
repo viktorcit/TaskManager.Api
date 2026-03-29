@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.ProfileDto;
+using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Model;
 
@@ -38,7 +40,7 @@ namespace TaskManager.Api.Controllers
             {
                 Id = u.Id,
                 Name = u.Name,
-                Nickname = u.Nickname,
+                Nickname = u.Nickname
             }).ToList();
 
             return Ok(response);
@@ -71,12 +73,22 @@ namespace TaskManager.Api.Controllers
                 return Unauthorized("Profile not found");
             }
             var userPerformerTasks = await _db.Tasks
-                .Where(t => t.Performers
-                .Any(p => p.Id == user.Id))
-                .ToListAsync();
+                .Where(t => t.Performers.Any(p => p.Id == user.Id))
+                .Select(t => new TaskItemShortDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Status = t.Status
+                }).ToListAsync();
             var userOwnerTasks = await _db.Tasks
                 .Where(t => t.Owner.Id == user.Id)
-                .ToListAsync();
+                .Select(t => new TaskItemShortDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Status = t.Status
+                }).ToListAsync();
+
 
             var response = new PrivateProfileDto
             {
