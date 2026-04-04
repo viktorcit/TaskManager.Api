@@ -112,6 +112,12 @@ namespace TaskManager.Api.Controllers
             var profile = await _userManager.GetUserAsync(User);
             if (profile == null) return Unauthorized();
 
+            var isInRole = await _userManager.IsInRoleAsync(profile, "Admin");
+            if (isInRole)
+            {
+                return Forbid("You can't delete admin account");
+            }
+
             await _userManager.DeleteAsync(profile);
             return NoContent();
         }
@@ -125,6 +131,12 @@ namespace TaskManager.Api.Controllers
             var userId = _userManager.GetUserId(User);
             var profile = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (userId == null || profile == null) return Unauthorized();
+
+            var isInRole = await _userManager.IsInRoleAsync(profile, "Admin");
+            if (isInRole)
+            {
+                return Forbid("You can't patch admin account");
+            }
 
             if (dto.Name == null && dto.Age == null)
                 return BadRequest("Nothing to update");

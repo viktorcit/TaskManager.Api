@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
+using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Model;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -24,7 +25,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<ActionResult<AdminUserDto>> GetUsers()
+        public async Task<ActionResult<IEnumerable<AdminUserDto>>> GetUsers()
         {
             var users = await _userManager.Users.ToListAsync();
 
@@ -47,8 +48,20 @@ namespace TaskManager.Api.Controllers
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id.ToString());
             if (user == null) return NotFound();
 
-            var userPerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id)).ToListAsync();
-            var userOwnerTasks = await _db.Tasks.Where(t => t.Owner.Id == user.Id).ToListAsync();
+            var userPerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id))
+                .Select(p => new TaskItemShortDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Status = p.Status,
+                }).ToListAsync();
+            var userOwnerTasks = await _db.Tasks.Where(t => t.Owner.Id == user.Id)
+                .Select(p => new TaskItemShortDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Status = p.Status,
+                }).ToListAsync();
 
             var response = new AdminUserDto
             {

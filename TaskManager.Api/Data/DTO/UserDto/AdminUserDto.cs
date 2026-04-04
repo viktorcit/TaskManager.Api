@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
 
 namespace TaskManager.Api.Data.DTO.UserDto
@@ -14,7 +15,7 @@ namespace TaskManager.Api.Data.DTO.UserDto
         [Range(1, 100)]
         public int? Age { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        public List<TaskItem>? OwnerTasks { get; set; }
-        public List<TaskItem> PerformerTasks { get; set; } = new();
+        public List<TaskItemShortDto>? OwnerTasks { get; set; }
+        public List<TaskItemShortDto> PerformerTasks { get; set; } = new();
     }
 }

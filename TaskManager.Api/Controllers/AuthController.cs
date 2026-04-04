@@ -130,6 +130,14 @@ namespace TaskManager.Api.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var isInRole = await _userManager.IsInRoleAsync(user, "Employer");
+            if (isInRole)
+            {
+                return Forbid("you are already an employer");
+            }
+
             var existPending = await _db.EmployerRequests
                 .FirstOrDefaultAsync(r => r.UserId == User.FindFirstValue(ClaimTypes.NameIdentifier));
             if (existPending != null)

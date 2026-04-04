@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using TaskManager.Api.Model;
+using TaskManager.Api.Data.DTO.UserDto;
 
 namespace TaskManager.Api.Data.DTO.TasksDto
 {
@@ -20,10 +20,10 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         [Required]
         public string OwnerId { get; set; } = null!;
         [Required]
-        public ApplicationUser Owner { get; set; } = null!;
+        public UserShortDto Owner { get; set; } = null!;
         [Required]
         public string OwnerUsername { get; set; } = null!;
-        public List<ApplicationUser> Performers { get; set; } = new();
-        public List<string> PerfomersId { get; set; } = new();
+        public List<UserShortDto> Performers { get; set; } = new();
+        public List<string> PerformersId { get; set; } = new();
     }
 }

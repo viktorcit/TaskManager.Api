@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using TaskManager.Api.Model;
+﻿using TaskManager.Api.Data.DTO.UserDto;
 
 namespace TaskManager.Api.Data.DTO.TasksDto
 {
@@ -16,6 +15,6 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         public bool CanAnyoneJoin { get; set; }
         public string OwnerId { get; set; } = null!;
         public string OwnerUsername { get; set; } = null!;
-        public List<ApplicationUser> Performers { get; set; } = new();
+        public List<UserShortDto> Performers { get; set; } = new();
     }
 }

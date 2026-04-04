@@ -8,6 +8,7 @@ using TaskManager.Api.Model;
 using System.Security.Claims;
 using static TaskManager.Api.Model.JoinToTaskRequest;
 using TaskManager.Api.Data.DTO.JoinDto;
+using TaskManager.Api.Data.DTO.UserDto;
 
 namespace TaskManager.Api.Controllers
 {
@@ -62,7 +63,6 @@ namespace TaskManager.Api.Controllers
         }
 
 
-
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItemDto>> GetTaskByIdAsync(int id)
         {
@@ -72,6 +72,14 @@ namespace TaskManager.Api.Controllers
             {
                 return NotFound();
             }
+
+            var userPerformerTasks = task.Performers
+                .Select(p => new UserShortDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Username = p.UserName
+                }).ToList();
 
             var responseTasks = new TaskItemDto
             {
@@ -83,6 +91,7 @@ namespace TaskManager.Api.Controllers
                 CanAnyoneJoin = task.CanAnyoneJoin,
                 DueDate = task.DueDate,
                 Status = task.Status,
+                Performers = userPerformerTasks
             };
 
             return Ok(responseTasks);
@@ -182,7 +191,7 @@ namespace TaskManager.Api.Controllers
         //Post
         [Authorize(Roles = "Employer")]
         [HttpPost("create")]
-        public async Task<ActionResult<TaskItemDto>> CreateTaskAsync(CreateTaskDto dto)
+        public async Task<ActionResult<TaskItemResponseDto>> CreateTaskAsync(CreateTaskDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -225,7 +234,14 @@ namespace TaskManager.Api.Controllers
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
 
-            var responseTask = new TaskItemDto
+            var performersInTask = task.Performers.Select(p => new UserShortDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Username = p.UserName,
+            }).ToList();
+
+            var responseTask = new TaskItemResponseDto
             {
                 Id = task.Id,
                 Title = task.Title,
@@ -235,7 +251,7 @@ namespace TaskManager.Api.Controllers
                 Status = task.Status,
                 OwnerId = task.OwnerId,
                 OwnerUsername = task.OwnerUsername,
-                Performers = task.Performers.ToList()
+                Performers = performersInTask
             };
 
             return Ok(responseTask);
@@ -331,6 +347,7 @@ namespace TaskManager.Api.Controllers
         }
 
         //Delete
+        [Authorize(Roles = "Employer")]
         [HttpDelete("delete/{id}")]
         public async Task<ActionResult> DeleteTaskAsync(int id)
         {
