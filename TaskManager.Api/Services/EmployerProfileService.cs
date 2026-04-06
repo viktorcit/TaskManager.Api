@@ -15,8 +15,6 @@ namespace TaskManager.Api.Services
         }
 
 
-
-
         public EmployerProfile CreateProfile(string userId, EmployerRequest request)
         {
             var profile = new EmployerProfile

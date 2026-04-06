@@ -7,6 +7,7 @@ using TaskManager.Api.Data;
 using TaskManager.Api.JWT;
 using TaskManager.Api.Model;
 using TaskManager.Api.Services;
+using TaskManager.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmployerProfileService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"))

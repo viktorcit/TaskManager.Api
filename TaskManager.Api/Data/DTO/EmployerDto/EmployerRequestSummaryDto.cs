@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TaskManager.Api.Enums;
 
 namespace TaskManager.Api.Data.DTO.EmployerDto
 {
@@ -11,7 +12,7 @@ namespace TaskManager.Api.Data.DTO.EmployerDto
         public string CompanyName { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? UpdatedAt { get; set; }
-        public string Status { get; set; } = null!;
+        public RequestStatus Status { get; set; }
         public string Description { get; set; } = null!;
     }
 }

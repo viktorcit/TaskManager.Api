@@ -72,6 +72,8 @@ namespace TaskManager.Api.Controllers
                 CreatedAt = user.CreatedAt,
                 PerformerTasks = userPerformerTasks,
                 OwnerTasks = userOwnerTasks,
+                EmailConfirmed = user.EmailConfirmed,
+                LockoutEnd = user.LockoutEnd
             };
 
             return Ok(response);

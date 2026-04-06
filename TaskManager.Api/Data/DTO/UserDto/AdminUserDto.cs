@@ -12,10 +12,17 @@ namespace TaskManager.Api.Data.DTO.UserDto
         public string? Name { get; set; }
         [Required, MinLength(3), MaxLength(20)]
         public string Nickname { get; set; } = null!;
+
         [Range(1, 100)]
         public int? Age { get; set; }
+
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset? LockoutEnd {get; set; }
+
+        public bool EmailConfirmed { get; set; }
+
         public List<TaskItemShortDto>? OwnerTasks { get; set; }
         public List<TaskItemShortDto> PerformerTasks { get; set; } = new();
+        
     }
 }

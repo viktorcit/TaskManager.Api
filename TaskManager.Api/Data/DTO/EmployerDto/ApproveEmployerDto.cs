@@ -6,6 +6,6 @@ namespace TaskManager.Api.Data.DTO.EmployerDto
     {
         [Required]
         [MinLength(50), MaxLength(300)]
-        public string AdminComment { get; set; } = null!;
+        public string AdminComment { get; set; } = string.Empty;
     }
 }

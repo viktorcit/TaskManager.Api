@@ -1,6 +1,4 @@
-﻿using TaskManager.Api.Model;
-
-namespace TaskManager.Api.Data.DTO.TasksDto
+﻿namespace TaskManager.Api.Data.DTO.TasksDto
 {
     public class TaskItemSummaryDto
     {
@@ -10,6 +8,6 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         public string OwnerUsername { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public string Description { get; set; } = null!;
-        public Model.TaskStatus Status { get; set; }
+        public Enums.TaskStatus Status { get; set; }
     }
 }

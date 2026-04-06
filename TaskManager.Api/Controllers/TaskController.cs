@@ -32,7 +32,7 @@ namespace TaskManager.Api.Controllers
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetTasksInProgressAsync()
         {
             var tasks = await _db.Tasks
-                .Where(t => t.Status == Model.TaskStatus.InProgress)
+                .Where(t => t.Status == Enums.TaskStatus.InProgress)
                 .ToListAsync();
 
 
@@ -91,7 +91,8 @@ namespace TaskManager.Api.Controllers
                 CanAnyoneJoin = task.CanAnyoneJoin,
                 DueDate = task.DueDate,
                 Status = task.Status,
-                Performers = userPerformerTasks
+                Performers = userPerformerTasks.ToList(),
+                Checklist = task.Checklist.ToList(),
             };
 
             return Ok(responseTasks);
@@ -227,8 +228,9 @@ namespace TaskManager.Api.Controllers
                 DueDate = dto.DueDate,
                 CanAnyoneJoin = dto.CanAnyoneJoin,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Status = Model.TaskStatus.InProgress,
+                Status = Enums.TaskStatus.InProgress,
                 Performers = performers.ToList(),
+                Checklist = dto.Checklist.ToList(),
             };
 
             _db.Tasks.Add(task);
@@ -251,7 +253,8 @@ namespace TaskManager.Api.Controllers
                 Status = task.Status,
                 OwnerId = task.OwnerId,
                 OwnerUsername = task.OwnerUsername,
-                Performers = performersInTask
+                Performers = performersInTask,
+                Checklist = task.Checklist.ToList(),
             };
 
             return Ok(responseTask);

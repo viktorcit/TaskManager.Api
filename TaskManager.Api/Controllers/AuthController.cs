@@ -6,6 +6,7 @@ using System.Security.Claims;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.EmployerDto;
 using TaskManager.Api.Data.DTO.UserDto;
+using TaskManager.Api.Enums;
 using TaskManager.Api.JWT;
 using TaskManager.Api.Model;
 
@@ -33,11 +34,6 @@ namespace TaskManager.Api.Controllers
             _signInManager = signInManager;
             _db = db;
         }
-
-
-
-        const string ROLE_USER = "User";
-        const string PENDING_STATUS = "Pending";
 
 
 
@@ -76,7 +72,7 @@ namespace TaskManager.Api.Controllers
             }
 
 
-            var roleResult = await _userManager.AddToRoleAsync(user, ROLE_USER);
+            var roleResult = await _userManager.AddToRoleAsync(user, RolesName.User);
             if (!roleResult.Succeeded)
             {
                 await _userManager.DeleteAsync(user);
@@ -157,7 +153,7 @@ namespace TaskManager.Api.Controllers
                 Description = dto.Description,
                 Website = dto.Website,
                 UserId = userId,
-                Status = PENDING_STATUS,
+                Status = RequestStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 

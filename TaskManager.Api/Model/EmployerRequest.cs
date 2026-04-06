@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.Primitives;
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Data;
+﻿using System.ComponentModel.DataAnnotations;
+using TaskManager.Api.Enums;
 
 namespace TaskManager.Api.Model
 {
@@ -10,7 +8,7 @@ namespace TaskManager.Api.Model
         public int Id { get; set; }
         [Required]
         public string UserId { get; set; } = null!;
-        public string Status { get; set; } = null!;
+        public RequestStatus Status { get; set; }
         [Required]
         [MinLength(2), MaxLength(20)]
         public string CompanyName { get; set; } = null!;

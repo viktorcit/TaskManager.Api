@@ -14,5 +14,7 @@ namespace TaskManager.Api.Data.DTO.TasksDto
         [Required]
         public bool? CanAnyoneJoin { get; set; }
         public List<string> PerformersId { get; set; } = new();
+        [Required]
+        public List<string> Checklist { get; set; } = new();
     }
 }
