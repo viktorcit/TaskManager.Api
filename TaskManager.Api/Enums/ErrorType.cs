@@ -8,5 +8,6 @@
         Conflict,
         InternalServerError,
         Forbidden,
+        Unauthorized
     }
 }

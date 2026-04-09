@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Model;
+using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Services
 {
-    public class EmployerProfileService
+    public class EmployerProfileService : IEmployerProfileService
     {
         private readonly AppDbContext _db;
-
 
         public EmployerProfileService(AppDbContext db)
         {
@@ -15,7 +15,7 @@ namespace TaskManager.Api.Services
         }
 
 
-        public EmployerProfile CreateProfile(string userId, EmployerRequest request)
+        public EmployerProfile CreateEmployerProfile(string userId, EmployerRequest request)
         {
             var profile = new EmployerProfile
             {
@@ -29,7 +29,7 @@ namespace TaskManager.Api.Services
             return profile;
         }
 
-        public async Task<EmployerProfile?> GetProfileByUserIdAsync(string userId)
+        public async Task<EmployerProfile?> GetEmployerProfileByUserIdAsync(string userId)
         {
             var profile = await _db.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
             if (profile == null) return null;

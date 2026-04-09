@@ -13,7 +13,7 @@ namespace TaskManager.Api.Services
     {
         private readonly AppDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly EmployerProfileService _profileService;
+        private readonly IEmployerProfileService _profileService;
 
         public AdminService(AppDbContext db, UserManager<ApplicationUser> userManager, EmployerProfileService profileService)
         {
@@ -120,10 +120,10 @@ namespace TaskManager.Api.Services
 
             try
             {
-                var existingProfile = await _profileService.GetProfileByUserIdAsync(user.Id);
+                var existingProfile = await _profileService.GetEmployerProfileByUserIdAsync(user.Id);
                 if (existingProfile == null)
                 {
-                    var profile = _profileService.CreateProfile(user.Id, new EmployerRequest
+                    var profile = _profileService.CreateEmployerProfile(user.Id, new EmployerRequest
                     {
                         UserId = user.Id,
                         CompanyName = request.CompanyName,
