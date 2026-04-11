@@ -14,7 +14,7 @@ using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Services
 {
-    public class Authservice : IAuthService
+    public class AuthService : IAuthService
     {
 
         private readonly JwtService _jwtService;
@@ -22,7 +22,7 @@ namespace TaskManager.Api.Services
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly AppDbContext _db;
 
-        public Authservice(
+        public AuthService(
             JwtService jwtService,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,

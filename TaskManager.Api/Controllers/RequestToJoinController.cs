@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TaskManager.Api.Data;
+using TaskManager.Api.Data.DTO.JoinDto;
 using TaskManager.Api.Data.DTO.JoinToTaskDto;
-using TaskManager.Api.Model;
+using TaskManager.Api.Enums;
+using TaskManager.Api.Extensions;
+using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
 {
@@ -12,145 +12,130 @@ namespace TaskManager.Api.Controllers
     [Route("request-to-join")]
     public class RequestToJoinController : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IRequestToJoinService _requestToJoinService;
 
 
-        public RequestToJoinController(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public RequestToJoinController(IRequestToJoinService requestToJoinService)
         {
-            _db = db;
-            _userManager = userManager;
+            _requestToJoinService = requestToJoinService;
         }
 
 
         [Authorize(Roles = "Employer")]
-        [HttpGet("requests-join-to-task")]
+        [HttpGet]
         public async Task<ActionResult<List<JoinToTaskRequestSummaryDto>>> GetJoinToTaskRequestsAsync()
         {
-            var ownerId = _userManager.GetUserId(User);
-            var tasks = await _db.Tasks
-                .Where(t => t.OwnerId == ownerId)
-                .Select(t => t.Id)
-                .ToListAsync();
-            if (!tasks.Any())
+            var ownerId = User.GetUserId();
+            if (ownerId == null)
             {
-                return Ok(new List<JoinToTaskRequestSummaryDto>());
+                return Unauthorized();
             }
-            var requests = await _db.JoinToTaskRequests
-                .Where(r => tasks.Contains(r.TaskId))
-                .Select(r => new JoinToTaskRequestSummaryDto
-                {
-                    Id = r.Id,
-                    TaskId = r.TaskId,
-                    UserId = r.UserId,
-                    UserName = r.UserName,
-                    Status = r.Status,
-                    CreatedAt = r.CreatedAt
-                }).ToListAsync();
 
-            return Ok(requests);
+            var result = await _requestToJoinService.GetJoinToTaskRequestsAsync(ownerId);
+
+            return Ok(result);
         }
 
 
         [Authorize(Roles = "Employer")]
-        [HttpGet("requests-join-to-task/{id}")]
+        [HttpGet("{id}")]
         public async Task<ActionResult<JoinToTaskRequestSummaryDto>> GetJoinToTaskRequestByIdAsync(int id)
         {
-            var ownerId = _userManager.GetUserId(User);
+            var ownerId = User.GetUserId();
             if (ownerId == null)
             {
                 return Unauthorized();
             }
-            var request = await _db.JoinToTaskRequests
-                .FirstOrDefaultAsync(r => r.Id == id && r.Task.OwnerId == ownerId);
-            if (request == null)
+
+            var result = await _requestToJoinService.GetJoinToTaskRequestByIdAsync(id, ownerId);
+            if (result == null)
             {
                 return NotFound();
             }
 
-            var responseRequest = new JoinToTaskRequestSummaryDto
-            {
-                Id = request.Id,
-                TaskId = request.TaskId,
-                UserId = request.UserId,
-                UserName = request.UserName,
-                Status = request.Status,
-                CreatedAt = request.CreatedAt,
-                Description = request.Description
-            };
-
-            return Ok(responseRequest);
+            return Ok(result);
         }
 
 
         [Authorize(Roles = "Employer")]
-        [HttpPost("requests-join-to-task/{id}/approve")]
+        [HttpPost("{id}/approve")]
         public async Task<ActionResult> ApproveJoinToTaskRequestAsync(int id)
         {
-            var ownerId = _userManager.GetUserId(User);
+            var ownerId = User.GetUserId();
             if (ownerId == null)
             {
                 return Unauthorized();
             }
 
-            var request = await _db.JoinToTaskRequests
-                .FirstOrDefaultAsync(r => r.Id == id && r.Task.OwnerId == ownerId);
-            if (request == null)
-            {
-                return NotFound();
-            }
-            if(request.Status == JoinToTaskRequest.JoinRequestStatus.Approved)
-            {
-                return BadRequest("Request has been Approved.");
-            }
+            var result = await _requestToJoinService.ApproveJoinToTaskRequestAsync(id, ownerId);
 
-            var user = await _userManager.FindByIdAsync(request.UserId);
-            if (user == null)
+            return result.ErrorType switch
             {
-                return NotFound("User not found.");
-            }
-
-            var userExistsInTask = await _db.Tasks
-                .Where(t => t.Id == request.TaskId)
-                .AnyAsync(t => t.Performers.Contains(user));
-            if (userExistsInTask)
-            {
-                return BadRequest("User is already a performer of this task.");
-            }
-
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == request.TaskId);
-            if (task == null)
-            {
-                return NotFound("Task not found.");
-            }
-
-            request.Status = JoinToTaskRequest.JoinRequestStatus.Approved;
-            request.ReviewedAt = DateTimeOffset.UtcNow;
-            task.Performers.Add(user);
-
-            await _db.SaveChangesAsync();
-            return Ok("Request has been approved.");
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                ErrorType.BadRequest => BadRequest(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
         }
 
         [Authorize(Roles = "Employer")]
-        [HttpPost("requests-join-to-task/{id}/reject")]
+        [HttpPost("{id}/reject")]
         public async Task<ActionResult> RejectJoinToTaskRequestAsync(int id)
         {
-            var ownerId = _userManager.GetUserId(User);
+            var ownerId = User.GetUserId();
             if (ownerId == null)
             {
                 return Unauthorized();
             }
-            var request = await _db.JoinToTaskRequests
-                .FirstOrDefaultAsync(r => r.Id == id && r.Task.OwnerId == ownerId);
-            if (request == null)
+            var result = await _requestToJoinService.RejectJoinToTaskRequestAsync(id, ownerId);
+
+            return result.ErrorType switch
             {
-                return NotFound();
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
+        }
+
+        [Authorize]
+        [HttpPost("{id}/join")]
+        public async Task<ActionResult> JoinTaskAsync([FromRoute(Name = "id")] int taskId)
+        {
+            var userId = User.GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
             }
-            request.Status = JoinToTaskRequest.JoinRequestStatus.Rejected;
-            request.ReviewedAt = DateTimeOffset.UtcNow;
-            await _db.SaveChangesAsync();
-            return Ok("Request has been rejected.");
+            var result = await _requestToJoinService.JoinTaskAsync(taskId, userId);
+
+            return result.ErrorType switch
+            {
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                ErrorType.BadRequest => BadRequest(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
+        }
+
+        [Authorize]
+        [HttpPost("{id}join-request")]
+        public async Task<ActionResult> RequestToJoinTaskAsync([FromRoute(Name = "id")] int taskId, JoinToTaskRequestDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var result = await _requestToJoinService.RequestToJoinTaskAsync(taskId, dto, userId);
+
+            return result.ErrorType switch
+            {
+                ErrorType.Unauthorized => Unauthorized(result.ResponseMessage),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                ErrorType.BadRequest => BadRequest(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
         }
     }
 }

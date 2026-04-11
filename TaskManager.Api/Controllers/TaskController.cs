@@ -5,9 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Model;
-using System.Security.Claims;
-using static TaskManager.Api.Model.JoinToTaskRequest;
-using TaskManager.Api.Data.DTO.JoinDto;
 using TaskManager.Api.Data.DTO.UserDto;
 
 namespace TaskManager.Api.Controllers
@@ -261,93 +258,7 @@ namespace TaskManager.Api.Controllers
         }
 
 
-        [Authorize]
-        [HttpPost("join/{id}")]
-        public async Task<ActionResult> JoinTaskAsync([FromRoute(Name = "id")] int taskId)
-        {
-            var user = await GetCurrentUserAsync();
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-            var userIsInRole = await _userManager.IsInRoleAsync(user, "Employer");
-            if (userIsInRole)
-            {
-                return Forbid("Employers cannot join tasks as performers.");
-            }
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
-            if (task == null)
-            {
-                return NotFound("Task not found.");
-            }
-            if (task.CanAnyoneJoin == false)
-            {
-                return BadRequest("This task is not open for direct joining. Submit a join request.");
-            }
-            if (task.Performers.Any(p => p.Id == user.Id))
-            {
-                return BadRequest("You are already a performer of this task.");
-            }
-
-            task.Performers.Add(user);
-            await _db.SaveChangesAsync();
-
-            return Ok("You have successfully joined the task.");
-        }
-
-        [Authorize]
-        [HttpPost("join-request/{id}")]
-        public async Task<ActionResult> RequestToJoinTaskAsync([FromRoute(Name = "id")] int taskId, JoinToTaskRequestDto dto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var user = await GetCurrentUserAsync();
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-            var userIsInRole = await _userManager.IsInRoleAsync(user, "Employer");
-            if (userIsInRole)
-            {
-                return Forbid("Employers cannot join tasks as performers.");
-            }
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
-            if (task == null)
-            {
-                return NotFound("Task not found.");
-            }
-            if (task.CanAnyoneJoin == true)
-            {
-                return BadRequest("This task is open for joining. Just joining.");
-            }
-            if (task.Performers.Any(p => p.Id == user.Id))
-            {
-                return BadRequest("You are already a performer of this task.");
-            }
-            var username = user.UserName;
-            if (username == null)
-            {
-                return BadRequest("Username not found.");
-            }
-
-
-            var joinRequest = new JoinToTaskRequest
-            {
-                TaskId = task.Id,
-                UserId = user.Id,
-                UserName = username,
-                Task = task,
-                Status = JoinRequestStatus.Pending,
-                Description = dto.Description
-            };
-
-            _db.JoinToTaskRequests.Add(joinRequest);
-            await _db.SaveChangesAsync();
-
-            return Ok("Your request to join the task has been sent to the owner.");
-        }
+        
 
         //Delete
         [Authorize(Roles = "Employer")]
