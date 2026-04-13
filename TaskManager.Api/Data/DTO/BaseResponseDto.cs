@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using TaskManager.Api.Enums;
+﻿using TaskManager.Api.Enums;
 
 namespace TaskManager.Api.Data.DTO
 {

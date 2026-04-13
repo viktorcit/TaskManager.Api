@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using static TaskManager.Api.Model.JoinToTaskRequest;
 
 namespace TaskManager.Api.Data.DTO.JoinDto
 {

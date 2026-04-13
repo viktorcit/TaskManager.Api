@@ -2,10 +2,14 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.TasksDto;
-using TaskManager.Api.Model;
 using TaskManager.Api.Data.DTO.UserDto;
+using TaskManager.Api.Enums;
+using TaskManager.Api.Extensions;
+using TaskManager.Api.Model;
+using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
 {
@@ -13,14 +17,12 @@ namespace TaskManager.Api.Controllers
     [Route("tasks")]
     public class TaskController : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ITaskService _taskService;
 
 
-        public TaskController(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public TaskController(ITaskService taskService)
         {
-            _db = db;
-            _userManager = userManager;
+            _taskService = taskService;
         }
 
 
@@ -28,71 +30,30 @@ namespace TaskManager.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetTasksInProgressAsync()
         {
-            var tasks = await _db.Tasks
-                .Where(t => t.Status == Enums.TaskStatus.InProgress)
-                .ToListAsync();
+            var tasks = await _taskService.GetTasksInProgressAsync();
 
-
-            var responseTasks = tasks.Select(t => new TaskItemSummaryDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-            }).ToList();
-
-            return Ok(responseTasks);
+            return Ok(tasks);
         }
 
         [HttpGet("all")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetAllTasksAsync()
         {
-            var tasks = await _db.Tasks.ToListAsync();
+            var tasks = await _taskService.GetAllTasksAsync();
 
-            var responseTasks = tasks.Select(t => new TaskItemSummaryDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-                Status = t.Status
-            }).ToList();
-
-            return Ok(responseTasks);
+            return Ok(tasks);
         }
 
 
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItemDto>> GetTaskByIdAsync(int id)
         {
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var task = await _taskService.GetTaskByIdAsync(id);
             if (task == null)
             {
-                return NotFound();
+                return NotFound("Task not found.");
             }
 
-            var userPerformerTasks = task.Performers
-                .Select(p => new UserShortDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Username = p.UserName
-                }).ToList();
-
-            var responseTasks = new TaskItemDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                OwnerUsername = task.OwnerUsername,
-                CreatedAt = task.CreatedAt,
-                Description = task.Description,
-                CanAnyoneJoin = task.CanAnyoneJoin,
-                DueDate = task.DueDate,
-                Status = task.Status,
-                Performers = userPerformerTasks.ToList(),
-                Checklist = task.Checklist.ToList(),
-            };
-
-            return Ok(responseTasks);
+            return Ok(task);
         }
 
 
@@ -100,89 +61,59 @@ namespace TaskManager.Api.Controllers
         [HttpGet("my-created")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserCreatedTasksAsync()
         {
-            var user = await GetCurrentUserAsync();
-            if (user == null)
+            var userId = User.GetUserId();
+            if (userId == null)
             {
                 return Unauthorized();
             }
-            var userTasks = await _db.Tasks
-                .Where(t => t.OwnerId == user.Id)
-                .ToListAsync();
-            if (userTasks.Count == 0)
+
+            var result = await _taskService.GetUserCreatedTasksAsync(userId);
+
+            return result.ErrorType switch
             {
-                return NotFound("You have no created tasks.");
-            }
-            var responseTasks = userTasks.Select(t => new TaskItemSummaryDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-            }).ToList();
-            return Ok(responseTasks);
+                ErrorType.Unauthorized => Unauthorized(),
+                _ => Ok(result.Data)
+            };
         }
 
         [Authorize]
         [HttpGet("my-performing")]
         public async Task<ActionResult<List<TaskItemSummaryDto>>> GetUserPerformingTasksAsync()
         {
-            var performer = await GetCurrentUserAsync();
-            if (performer == null)
+            var userId = User.GetUserId();
+            if (userId == null)
             {
                 return Unauthorized();
             }
-            var isInRole = await _userManager.IsInRoleAsync(performer, "Employer");
-            if (isInRole)
-            {
-                return Forbid("Only a regular user can access their tasks.");
-            }
-            var tasks = await _db.Tasks.Where(t => t.Performers.Contains(performer)).ToListAsync();
-            if (tasks.Count == 0)
-            {
-                return NotFound("You have no tasks!");
-            }
 
-            var responseTasks = tasks.Select(t => new TaskItemSummaryDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                OwnerUsername = t.OwnerUsername,
-                OwnerId = t.OwnerId,
-                CreatedAt = t.CreatedAt
-            }).ToList();
+            var result = await _taskService.GetUserPerformingTasksAsync(userId);
 
-            return Ok(responseTasks);
+            return result.ErrorType switch
+            {
+                ErrorType.Unauthorized => Unauthorized(),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                _ => Ok(result.Data)
+            };
         }
 
         [Authorize]
         [HttpGet("my-performing/{id}")]
         public async Task<ActionResult<TaskItemDto>> GetUserPerformingTaskByIdAsync(int id)
         {
-            var performer = await GetCurrentUserAsync();
-            if (performer == null)
+            var userId = User.GetUserId();
+            if (userId == null)
             {
                 return Unauthorized();
             }
-            var isInRole = await _userManager.IsInRoleAsync(performer, "Employer");
-            if (isInRole)
+            var result = await _taskService.GetUserPerformingTaskByIdAsync(id, userId);
+
+            return result.ErrorType switch
             {
-                return Forbid("Only a regular user can access their tasks.");
-            }
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == id && t.Performers.Any(p => p.Id == performer.Id));
-            if (task == null)
-            {
-                return NotFound();
-            }
-            var responseTask = new TaskItemDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                OwnerUsername = task.OwnerUsername,
-                OwnerId = task.OwnerId,
-                CreatedAt = task.CreatedAt
+                ErrorType.Unauthorized => Unauthorized(),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                _ => Ok(result.Data)
             };
-            return Ok(responseTask);
         }
 
 
@@ -195,66 +126,18 @@ namespace TaskManager.Api.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var owner = await GetCurrentUserAsync();
-            if (owner == null)
-            {
+            var userId = User.GetUserId();
+            if (userId == null)
                 return Unauthorized();
-            }
 
-            var performers = await _userManager.Users
-                .Where(u => dto.PerformersId.Contains(u.Id))
-                .ToListAsync();
-            if (performers.Count != dto.PerformersId.Count)
-            {
-                return BadRequest("One or more performers not found.");
-            }
+            var result = await _taskService.CreateTaskAsync(dto, userId);
 
-            var ownerUsername = owner.UserName;
-            if (ownerUsername == null)
+            return result.ErrorType switch
             {
-                return BadRequest("Owner username not found.");
-            }
-
-            var task = new TaskItem
-            {
-                Owner = owner,
-                OwnerId = owner.Id,
-                OwnerUsername = ownerUsername,
-                Title = dto.Title,
-                Description = dto.Description,
-                DueDate = dto.DueDate,
-                CanAnyoneJoin = dto.CanAnyoneJoin,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Status = Enums.TaskStatus.InProgress,
-                Performers = performers.ToList(),
-                Checklist = dto.Checklist.ToList(),
+                ErrorType.Unauthorized => Unauthorized(),
+                ErrorType.BadRequest => BadRequest(result.ResponseMessage),
+                _ => Ok(result.Data)
             };
-
-            _db.Tasks.Add(task);
-            await _db.SaveChangesAsync();
-
-            var performersInTask = task.Performers.Select(p => new UserShortDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Username = p.UserName,
-            }).ToList();
-
-            var responseTask = new TaskItemResponseDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                DueDate = task.DueDate,
-                CreatedAt = task.CreatedAt,
-                Status = task.Status,
-                OwnerId = task.OwnerId,
-                OwnerUsername = task.OwnerUsername,
-                Performers = performersInTask,
-                Checklist = task.Checklist.ToList(),
-            };
-
-            return Ok(responseTask);
         }
 
 
@@ -265,32 +148,20 @@ namespace TaskManager.Api.Controllers
         [HttpDelete("delete/{id}")]
         public async Task<ActionResult> DeleteTaskAsync(int id)
         {
-            var user = await GetCurrentUserAsync();
-            if (user == null)
+            var userId = User.GetUserId();
+            if (userId == null)
             {
                 return Unauthorized();
             }
-            var task = await _db.Tasks.FindAsync(id);
-            if (task == null)
+            var result = await _taskService.DeleteTaskAsync(id, userId);
+
+            return result.ErrorType switch
             {
-                return NotFound();
-            }
-            if (task.OwnerId != user.Id)
-            {
-                return Forbid("You can`t delete not yours task.");
-            }
-
-            _db.Tasks.Remove(task);
-            await _db.SaveChangesAsync();
-            return NoContent();
-        }
-
-
-        //Private methods
-        private async Task<ApplicationUser?> GetCurrentUserAsync()
-        {
-            var userId = _userManager.GetUserId(User);
-            return userId == null ? null : await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                ErrorType.Unauthorized => Unauthorized(),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
         }
     }
 }

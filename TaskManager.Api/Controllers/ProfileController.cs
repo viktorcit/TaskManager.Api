@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using TaskManager.Api.Data.DTO.ProfileDto;
 using TaskManager.Api.Enums;
 using TaskManager.Api.Extensions;
-using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
@@ -97,7 +96,5 @@ namespace TaskManager.Api.Controllers
                 _ => Ok(result.ResponseMessage)
             };
         }
-
-
     }
 }

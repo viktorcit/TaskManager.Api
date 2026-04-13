@@ -25,7 +25,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AdminUserDto>>> GetUsers()
+        public async Task<ActionResult<List<AdminUserDto>>> GetUsers()
         {
             var users = await _userManager.Users.ToListAsync();
 
