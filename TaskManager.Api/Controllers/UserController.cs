@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.TasksDto;
 using TaskManager.Api.Data.DTO.UserDto;
+using TaskManager.Api.Enums;
+using TaskManager.Api.Extensions;
 using TaskManager.Api.Model;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
 {
@@ -14,101 +16,64 @@ namespace TaskManager.Api.Controllers
     [Route("users")]
     public class UserController : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserService _userService;
 
-        public UserController(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public UserController(IUserService userService)
         {
-            _db = db;
-            _userManager = userManager;
+            _userService = userService;
         }
+
+
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<List<AdminUserDto>>> GetUsers()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var result = await _userService.GetUsers();
 
-            var response = users.Select(u => new AdminUserDto
-            {
-                Id = u.Id,
-                Name = u.Name,
-                Nickname = u.Nickname,
-                Age = u.Age,
-                CreatedAt = u.CreatedAt,
-            }).ToList();
-
-            return Ok(response);
+            return result;
         }
+
 
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
-        public async Task<ActionResult<AdminUserDto>> GetUserByIdAsync(Guid id)
+        public async Task<ActionResult<AdminUserDto>> GetUserByIdAsync(string userId)
         {
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id.ToString());
-            if (user == null) return NotFound();
+            var result = await _userService.GetUserByIdAsync(userId);
+            if (result == null) 
+                return NotFound();
 
-            var userPerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id))
-                .Select(p => new TaskItemShortDto
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Status = p.Status,
-                }).ToListAsync();
-            var userOwnerTasks = await _db.Tasks.Where(t => t.Owner.Id == user.Id)
-                .Select(p => new TaskItemShortDto
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Status = p.Status,
-                }).ToListAsync();
-
-            var response = new AdminUserDto
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Nickname = user.Nickname,
-                Age = user.Age,
-                CreatedAt = user.CreatedAt,
-                PerformerTasks = userPerformerTasks,
-                OwnerTasks = userOwnerTasks,
-                EmailConfirmed = user.EmailConfirmed,
-                LockoutEnd = user.LockoutEnd
-            };
-
-            return Ok(response);
+            return result;
         }
 
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUserAsync(Guid id)
+        public async Task<IActionResult> DeleteUserAsync(string userId)
         {
-            var user = await _db.Users.FindAsync(id.ToString());
-            if (user == null) return NotFound();
+            var result = await _userService.DeleteUserAsync(userId);
 
-            _db.Users.Remove(user);
-            await _db.SaveChangesAsync();
-
-            return NoContent();
+            return result.ErrorType switch
+            {
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                _ => NoContent()
+            };
         }
 
         
         [Authorize(Roles = "Admin")]
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdateUserAsync(Guid id, AdminUpdateUserDto dto)
+        public async Task<IActionResult> UpdateUserAsync(string userId, AdminUpdateUserDto dto)
         {
-            var user = await _db.Users.FindAsync(id.ToString());
-            if (user == null) return NotFound();
+            var result = await _userService.UpdateUserAsync(userId, dto);
 
-            if (dto.Name != null)
-                user.Name = dto.Name;
-            if (dto.Age != null)
-                user.Age = dto.Age;
-            if(dto.Nickname != null)
-                user.Nickname = dto.Nickname;
-            await _db.SaveChangesAsync();
-            return Ok($"Data of user {id} updated");
+            return result.ErrorType switch
+            {
+                ErrorType.NotFound => NotFound(result.ResponseMessage),
+                ErrorType.Forbidden => Forbid(result.ResponseMessage),
+                _ => Ok(result.ResponseMessage)
+            };
         }
     }
 }

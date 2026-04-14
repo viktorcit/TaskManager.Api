@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO;
@@ -9,7 +8,7 @@ using TaskManager.Api.Enums;
 using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 
-namespace TaskManager.Api.Controllers
+namespace TaskManager.Api.Services
 {
     public class ProfileService : IProfileService
     {

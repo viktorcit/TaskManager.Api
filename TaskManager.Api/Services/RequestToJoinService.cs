@@ -9,7 +9,7 @@ using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 using static TaskManager.Api.Model.JoinToTaskRequest;
 
-namespace TaskManager.Api.Controllers
+namespace TaskManager.Api.Services
 {
     public class RequestToJoinService : IRequestToJoinService
     {
