@@ -13,11 +13,13 @@ namespace TaskManager.Api.Controllers
     public class RequestToJoinController : ControllerBase
     {
         private readonly IRequestToJoinService _requestToJoinService;
+        private readonly ILogger<RequestToJoinController> _logger;
 
 
-        public RequestToJoinController(IRequestToJoinService requestToJoinService)
+        public RequestToJoinController(IRequestToJoinService requestToJoinService, ILogger<RequestToJoinController> logger)
         {
             _requestToJoinService = requestToJoinService;
+            _logger = logger;
         }
 
 
@@ -39,7 +41,7 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpGet("{id}")]
-        public async Task<ActionResult<JoinToTaskRequestSummaryDto>> GetJoinToTaskRequestByIdAsync(int id)
+        public async Task<ActionResult<JoinToTaskRequestSummaryDto>> GetJoinToTaskRequestByIdAsync([FromRoute(Name = "id")] int requestId)
         {
             var ownerId = User.GetUserId();
             if (ownerId == null)
@@ -47,7 +49,7 @@ namespace TaskManager.Api.Controllers
                 return Unauthorized();
             }
 
-            var result = await _requestToJoinService.GetJoinToTaskRequestByIdAsync(id, ownerId);
+            var result = await _requestToJoinService.GetJoinToTaskRequestByIdAsync(requestId, ownerId);
             if (result == null)
             {
                 return NotFound();
@@ -59,15 +61,16 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpPost("{id}/approve")]
-        public async Task<ActionResult> ApproveJoinToTaskRequestAsync(int id)
+        public async Task<ActionResult> ApproveJoinToTaskRequestAsync([FromRoute(Name = "id")] int requestId)
         {
             var ownerId = User.GetUserId();
             if (ownerId == null)
             {
                 return Unauthorized();
             }
+            _logger.LogInformation("Employer {UserId} is attempting to approve join request with id {RequestId}", ownerId, requestId);
 
-            var result = await _requestToJoinService.ApproveJoinToTaskRequestAsync(id, ownerId);
+            var result = await _requestToJoinService.ApproveJoinToTaskRequestAsync(requestId, ownerId);
 
             return result.ErrorType switch
             {
@@ -79,14 +82,16 @@ namespace TaskManager.Api.Controllers
 
         [Authorize(Roles = "Employer")]
         [HttpPost("{id}/reject")]
-        public async Task<ActionResult> RejectJoinToTaskRequestAsync(int id)
+        public async Task<ActionResult> RejectJoinToTaskRequestAsync([FromRoute(Name = "id")] int requestId)
         {
             var ownerId = User.GetUserId();
             if (ownerId == null)
             {
                 return Unauthorized();
             }
-            var result = await _requestToJoinService.RejectJoinToTaskRequestAsync(id, ownerId);
+            _logger.LogInformation("Employer {UserId} is attempting to reject join request with id {RequestId}", ownerId, requestId);
+
+            var result = await _requestToJoinService.RejectJoinToTaskRequestAsync(requestId, ownerId);
 
             return result.ErrorType switch
             {
@@ -104,6 +109,8 @@ namespace TaskManager.Api.Controllers
             {
                 return Unauthorized();
             }
+            _logger.LogInformation("User {UserId} is attempting to join task with id {TaskId}", userId, taskId);
+
             var result = await _requestToJoinService.JoinTaskAsync(taskId, userId);
 
             return result.ErrorType switch
@@ -116,7 +123,7 @@ namespace TaskManager.Api.Controllers
         }
 
         [Authorize]
-        [HttpPost("{id}join-request")]
+        [HttpPost("{id}/join-request")]
         public async Task<ActionResult> RequestToJoinTaskAsync([FromRoute(Name = "id")] int taskId, JoinToTaskRequestDto dto)
         {
             if (!ModelState.IsValid)
@@ -125,6 +132,7 @@ namespace TaskManager.Api.Controllers
             var userId = User.GetUserId();
             if (userId == null)
                 return Unauthorized();
+            _logger.LogInformation("User {UserId} is attempting to request to join task with id {TaskId}", userId, taskId);
 
             var result = await _requestToJoinService.RequestToJoinTaskAsync(taskId, dto, userId);
 

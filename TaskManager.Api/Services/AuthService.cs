@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TaskManager.Api.Data;
@@ -21,18 +19,21 @@ namespace TaskManager.Api.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly AppDbContext _db;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             JwtService jwtService,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            AppDbContext db
+            AppDbContext db,
+            ILogger<AuthService> logger
             )
         {
             _jwtService = jwtService;
             _userManager = userManager;
             _signInManager = signInManager;
             _db = db;
+            _logger = logger;
         }
 
 
@@ -94,6 +95,7 @@ namespace TaskManager.Api.Services
             }
 
             var token = await GenerateTokenAsync(user);
+            _logger.LogInformation("User {Nickname} registered successfully with ID {UserId}", user.Nickname, user.Id);
 
             return new BaseResponseWithDataDto<AuthResponseDto>
             {
@@ -153,6 +155,7 @@ namespace TaskManager.Api.Services
             }
 
             var token = await GenerateTokenAsync(user);
+            _logger.LogInformation("User {Nickname} logged in successfully with ID {UserId}", user.Nickname, user.Id);
 
             return new BaseResponseWithDataDto<AuthResponseDto>
             {
@@ -179,26 +182,22 @@ namespace TaskManager.Api.Services
                 };
             var isInRole = await _userManager.IsInRoleAsync(user, "Employer");
             if (isInRole)
-            {
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.Forbidden,
                     ResponseMessage = "You are already an employer"
                 };
-            }
 
             var existPending = await _db.EmployerRequests
                 .FirstOrDefaultAsync(r => r.UserId == userId && r.Status == RequestStatus.Pending);
             if (existPending != null)
-            {
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.BadRequest,
                     ResponseMessage = "You already have a pending employer request."
                 };
-            }
 
             var request = new EmployerRequest
             {
@@ -212,6 +211,7 @@ namespace TaskManager.Api.Services
 
             _db.EmployerRequests.Add(request);
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User {Nickname} submitted an employer request with ID {RequestId}", user.Nickname, request.Id);
 
             return new BaseResponseDto
             {

@@ -1,15 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.EmployerDto;
 using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Enums;
 using TaskManager.Api.Extensions;
-using TaskManager.Api.JWT;
-using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
@@ -20,10 +14,12 @@ namespace TaskManager.Api.Controllers
     {
 
         private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
 
@@ -52,9 +48,8 @@ namespace TaskManager.Api.Controllers
         public async Task<ActionResult<AuthResponseDto>> LoginAsync(LoginUserDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
+            _logger.LogInformation("Login attempt for user: {Nickname}", dto.Nickname);
 
             var result = await _authService.LoginAsync(dto);
 
@@ -72,11 +67,13 @@ namespace TaskManager.Api.Controllers
         [HttpPost("request-employer")]
         public async Task<ActionResult<RequestEmployerDto>> RequestEmployerAsync(RequestEmployerDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) 
+                return BadRequest(ModelState);
 
             var userId = User.GetUserId();
-            if (userId == null) 
+            if (userId == null)
                 return Unauthorized();
+            _logger.LogInformation("User with ID {UserId} is requesting employer status with company name: {CompanyName}", userId, dto.CompanyName);
 
             var result = await _authService.RequestEmployerAsync(dto, userId);
 

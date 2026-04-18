@@ -14,12 +14,14 @@ namespace TaskManager.Api.Services
         private readonly AppDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmployerProfileService _profileService;
+        private readonly ILogger<AdminService> _logger;
 
-        public AdminService(AppDbContext db, UserManager<ApplicationUser> userManager, EmployerProfileService profileService)
+        public AdminService(AppDbContext db, UserManager<ApplicationUser> userManager, EmployerProfileService profileService, ILogger<AdminService> logger)
         {
             _db = db;
             _userManager = userManager;
             _profileService = profileService;
+            _logger = logger;
         }
 
 
@@ -48,6 +50,7 @@ namespace TaskManager.Api.Services
 
             if (request == null)
             {
+                _logger.LogWarning("Pending employer request with ID {RequestId} not found.", id);
                 return null;
             }
 
@@ -117,6 +120,7 @@ namespace TaskManager.Api.Services
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
+            _logger.LogInformation("Starting transaction to approve employer request with ID {RequestId} for user {UserId}.", requestId, user.Id);
 
             try
             {
@@ -132,6 +136,7 @@ namespace TaskManager.Api.Services
                         CreatedAt = DateTimeOffset.UtcNow
                     });
                     await _db.EmployerProfiles.AddAsync(profile);
+                    _logger.LogInformation("Creating employer profile for user {UserId} with company name {CompanyName}", user.Id, request.CompanyName);
                 }
                 else
                 {
@@ -149,11 +154,13 @@ namespace TaskManager.Api.Services
                 {
                     await transaction.RollbackAsync();
                     var responseMessage = "Failed to assign Employer role to the user.";
+                    _logger.LogError("Error assigning Employer role to user {UserId}: {Errors}", user.Id, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
                     return new BaseResponseDto
                     {
                         IsSuccess = false,
                         ErrorType = ErrorType.InternalServerError,
-                        ResponseMessage = responseMessage
+                        ResponseMessage = responseMessage,
+                        Errors = roleResult.Errors.Select(e => e.Description).ToList()
                     };
                 }
 
@@ -164,10 +171,12 @@ namespace TaskManager.Api.Services
                 request.UpdatedAt = DateTimeOffset.UtcNow;
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
+                _logger.LogInformation("Successfully approved employer request with ID {RequestId} for user {UserId}. Approved by admin: {AdminId}", requestId, user.Id, adminId);
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+                _logger.LogError(ex, "An error occurred while approving employer request with ID {RequestId} for user {UserId}.", requestId, user.Id);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
@@ -184,15 +193,19 @@ namespace TaskManager.Api.Services
         }
 
 
-        public async Task<BaseResponseDto> RejectEmployerRequestAsync(int id, RejectEmployerDto dto, string adminId)
+        public async Task<BaseResponseDto> RejectEmployerRequestAsync(int requestId, RejectEmployerDto dto, string adminId)
         {
-            var request = await _db.EmployerRequests.FindAsync(id);
-            if (request == null) return new BaseResponseDto
+            var request = await _db.EmployerRequests.FindAsync(requestId);
+            if (request == null)
             {
-                ErrorType = ErrorType.NotFound,
-                IsSuccess = false,
-                ResponseMessage = "Request not found",
-            };
+                _logger.LogWarning("Employer request with ID {RequestId} not found for rejection.", requestId);
+                return new BaseResponseDto
+                {
+                    ErrorType = ErrorType.NotFound,
+                    IsSuccess = false,
+                    ResponseMessage = "Request not found",
+                };
+            }
 
             if (request.Status != RequestStatus.Pending) return new BaseResponseDto
             {
@@ -206,6 +219,7 @@ namespace TaskManager.Api.Services
             request.ReviewedAt = DateTimeOffset.UtcNow;
             request.ReviewedBy = adminId;
             await _db.SaveChangesAsync();
+            _logger.LogInformation("Employer request with ID {RequestId} has been rejected by admin {AdminId}. Reason: {Reason}", requestId, adminId, dto.reason);
 
             return new BaseResponseDto
             {

@@ -14,11 +14,16 @@ namespace TaskManager.Api.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AppDbContext _db;
+        private readonly ILogger<ProfileService> _logger;
 
-        public ProfileService(UserManager<ApplicationUser> userManager, AppDbContext db)
+        public ProfileService(
+            UserManager<ApplicationUser> userManager,
+            AppDbContext db,
+            ILogger<ProfileService> logger)
         {
             _userManager = userManager;
             _db = db;
+            _logger = logger;
         }
 
 
@@ -45,7 +50,10 @@ namespace TaskManager.Api.Services
         {
             var findProfile = await _userManager.Users.FirstOrDefaultAsync(u => u.Nickname.Normalize() == nickname.Normalize());
             if (findProfile == null)
+            {
+                _logger.LogWarning("Profile with nickname {Nickname} not found", nickname);
                 return null;
+            }
 
             var responseProfile = new PublicProfileDto
             {
@@ -108,14 +116,19 @@ namespace TaskManager.Api.Services
 
             var isInRole = await _userManager.IsInRoleAsync(userProfile, RolesName.Admin);
             if (isInRole)
+            {
+                _logger.LogWarning("Attempt to delete admin account with id {UserId}", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.Forbidden,
                     ResponseMessage = "You cant delete admin account"
                 };
+            }
 
             await _userManager.DeleteAsync(userProfile);
+            _logger.LogInformation("User with id {UserId} deleted their profile", userId);
+
             return new BaseResponseDto
             {
                 IsSuccess = true,
@@ -138,20 +151,26 @@ namespace TaskManager.Api.Services
 
             var isInRole = await _userManager.IsInRoleAsync(profile, RolesName.Admin);
             if (isInRole)
+            {
+                _logger.LogWarning("Attempt to update admin account with id {UserId}", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.Forbidden,
                     ResponseMessage = "You cant update admin account."
                 };
+            }
 
             if (dto.Name == null && dto.Age == null)
+            {
+                _logger.LogInformation("User with id {UserId} attempted to update profile without providing any data", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.BadRequest,
                     ResponseMessage = "Nothing to update"
                 };
+            }
 
             if (dto.Name != null)
                 profile.Name = dto.Name;
@@ -160,6 +179,8 @@ namespace TaskManager.Api.Services
 
             await _userManager.UpdateAsync(profile);
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User with id {UserId} updated their profile", userId);
+
             return new BaseResponseDto
             {
                 IsSuccess = true,

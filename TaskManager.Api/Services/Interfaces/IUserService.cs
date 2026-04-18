@@ -7,7 +7,7 @@ namespace TaskManager.Api.Services.Interfaces
     {
         Task<List<AdminUserDto>> GetUsers();
         Task<AdminUserDto?> GetUserByIdAsync(string userId);
-        Task<BaseResponseDto> DeleteUserAsync(string userId);
-        Task<BaseResponseDto> UpdateUserAsync(string userId, AdminUpdateUserDto dto);
+        Task<BaseResponseDto> DeleteUserAsync(string userId, string adminId);
+        Task<BaseResponseDto> UpdateUserAsync(string userId, string adminId, AdminUpdateUserDto dto);
     }
 }

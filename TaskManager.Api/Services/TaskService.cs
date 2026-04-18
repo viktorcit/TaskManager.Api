@@ -14,12 +14,14 @@ namespace TaskManager.Api.Services
     {
         private readonly AppDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<TaskService> _logger;
 
 
-        public TaskService(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public TaskService(AppDbContext db, UserManager<ApplicationUser> userManager, ILogger<TaskService> logger)
         {
             _db = db;
             _userManager = userManager;
+            _logger = logger;
         }
 
 
@@ -57,14 +59,12 @@ namespace TaskManager.Api.Services
         }
 
 
-        public async Task<TaskItemDto?> GetTaskByIdAsync(int id)
+        public async Task<TaskItemDto?> GetTaskByIdAsync(int taskId)
         {
             var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == id);
+                .FirstOrDefaultAsync(t => t.Id == taskId);
             if (task == null)
-            {
                 return null;
-            }
 
             var userPerformerTasks = task.Performers
                 .Select(p => new UserShortDto
@@ -96,14 +96,12 @@ namespace TaskManager.Api.Services
         {
             var user = await GetCurrentUserByIdAsync(userId);
             if (user == null)
-            {
                 return new BaseResponseWithDataDto<List<TaskItemSummaryDto>>
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.Unauthorized,
                     ResponseMessage = ""
                 };
-            }
             var userTasks = await _db.Tasks
                 .Where(t => t.OwnerId == user.Id)
                 .ToListAsync();
@@ -114,6 +112,7 @@ namespace TaskManager.Api.Services
                 OwnerUsername = t.OwnerUsername,
                 Status = t.Status
             }).ToList();
+            _logger.LogInformation("User {UserId} retrieved their created tasks. Total tasks: {TaskCount}", userId, responseTasks.Count);
 
             return new BaseResponseWithDataDto<List<TaskItemSummaryDto>>
             {
@@ -140,6 +139,7 @@ namespace TaskManager.Api.Services
             var isInRole = await _userManager.IsInRoleAsync(performer, RolesName.Employer);
             if (isInRole)
             {
+                _logger.LogWarning("User {UserId} with role 'Employer' attempted to access performing tasks.", userId);
                 return new BaseResponseWithDataDto<List<TaskItemSummaryDto>>
                 {
                     IsSuccess = false,
@@ -158,6 +158,7 @@ namespace TaskManager.Api.Services
                 OwnerId = t.OwnerId,
                 CreatedAt = t.CreatedAt
             }).ToList();
+            _logger.LogInformation("User {UserId} retrieved their performing tasks. Total tasks: {TaskCount}", userId, responseTasks.Count);
 
             return new BaseResponseWithDataDto<List<TaskItemSummaryDto>>
             {
@@ -184,6 +185,7 @@ namespace TaskManager.Api.Services
             var isInRole = await _userManager.IsInRoleAsync(performer, RolesName.Employer);
             if (isInRole)
             {
+                _logger.LogWarning("User {UserId} with role 'Employer' attempted to access performing task with ID {TaskId}.", userId, taskId);
                 return new BaseResponseWithDataDto<TaskItemDto>
                 {
                     IsSuccess = false,
@@ -195,6 +197,7 @@ namespace TaskManager.Api.Services
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.Performers.Any(p => p.Id == performer.Id));
             if (task == null)
             {
+                _logger.LogWarning("Task with ID {TaskId} not found for user {UserId}.", taskId, userId);
                 return new BaseResponseWithDataDto<TaskItemDto>
                 {
                     IsSuccess = false,
@@ -212,6 +215,7 @@ namespace TaskManager.Api.Services
                 OwnerId = task.OwnerId,
                 CreatedAt = task.CreatedAt
             };
+            _logger.LogInformation("User {UserId} retrieved performing task with ID {TaskId}.", userId, taskId);
 
             return new BaseResponseWithDataDto<TaskItemDto>
             {
@@ -277,6 +281,7 @@ namespace TaskManager.Api.Services
 
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User {UserId} created a new task with ID {TaskId}.", userId, task.Id);
 
             var performersInTask = task.Performers.Select(p => new UserShortDto
             {
@@ -309,7 +314,7 @@ namespace TaskManager.Api.Services
         }
 
 
-        public async Task<BaseResponseDto> DeleteTaskAsync(int id, string userId)
+        public async Task<BaseResponseDto> DeleteTaskAsync(int taskId, string userId)
         {
             var user = await GetCurrentUserByIdAsync(userId);
             if (user == null)
@@ -321,9 +326,10 @@ namespace TaskManager.Api.Services
                     ResponseMessage = ""
                 };
             }
-            var task = await _db.Tasks.FindAsync(id);
+            var task = await _db.Tasks.FindAsync(taskId);
             if (task == null)
             {
+                _logger.LogWarning("Task with ID {TaskId} not found for deletion by user {UserId}.", taskId, userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
@@ -343,6 +349,8 @@ namespace TaskManager.Api.Services
 
             _db.Tasks.Remove(task);
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User {UserId} deleted task with ID {TaskId}.", userId, taskId);
+
             return new BaseResponseDto
             {
                 IsSuccess = true,

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TaskManager.Api.Data.DTO.EmployerDto;
 using TaskManager.Api.Enums;
+using TaskManager.Api.Extensions;
 using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 
@@ -14,11 +15,16 @@ namespace TaskManager.Api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAdminService _adminService;
+        private readonly ILogger<AdminController> _logger;
 
-        public AdminController(UserManager<ApplicationUser> userManager, IAdminService adminService)
+        public AdminController(
+            UserManager<ApplicationUser> userManager,
+            IAdminService adminService,
+            ILogger<AdminController> logger)
         {
             _userManager = userManager;
             _adminService = adminService;
+            _logger = logger;
         }
 
 
@@ -27,6 +33,12 @@ namespace TaskManager.Api.Controllers
         [HttpGet("employer-requests")]
         public async Task<ActionResult<List<EmployerRequestSummaryDto>>> GetPendingEmployerRequestsAsync()
         {
+            var adminId = User.GetUserId();
+            if (adminId == null)
+            {
+                return Unauthorized();
+            }
+            _logger.LogInformation("Admin {AdminId} is retrieving pending employer requests.", adminId);
             var pendingRequests = await _adminService.GetPendingEmployerRequestsAsync();
 
             return Ok(pendingRequests);
@@ -36,6 +48,12 @@ namespace TaskManager.Api.Controllers
         [HttpGet("employer-requests/{id}")]
         public async Task<ActionResult<EmployerRequestSummaryDto>> GetPendingRequestsByIdAsync(int id)
         {
+            var adminId = User.GetUserId();
+            if(adminId == null)
+            {
+                return Unauthorized();
+            }
+            _logger.LogInformation("Admin {AdminId} is retrieving details for employer request {RequestId}.", adminId, id);
             var request = await _adminService.GetPendingRequestsByIdAsync(id);
 
             if (request == null)
@@ -55,6 +73,8 @@ namespace TaskManager.Api.Controllers
             {
                 return Unauthorized();
             }
+            _logger.LogInformation("Admin {AdminId} is approving employer request {RequestId}.", adminId, requestId);
+
             var result = await _adminService.ApproveEmployerRequestAsync(requestId, dto, adminId);
 
             return result.ErrorType switch
@@ -76,6 +96,7 @@ namespace TaskManager.Api.Controllers
             {
                 return Unauthorized();
             }
+            _logger.LogInformation("Admin {AdminId} is rejecting employer request {RequestId}.", adminId, id);
 
             var result = await _adminService.RejectEmployerRequestAsync(id, dto, adminId);
 

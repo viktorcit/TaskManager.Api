@@ -14,11 +14,16 @@ namespace TaskManager.Api.Services
     {
         private readonly AppDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<UserService> _logger;
 
-        public UserService(AppDbContext db, UserManager<ApplicationUser> userManager)
+        public UserService(
+            AppDbContext db,
+            UserManager<ApplicationUser> userManager,
+            ILogger<UserService> logger)
         {
             _db = db;
             _userManager = userManager;
+            _logger = logger;
         }
 
 
@@ -43,7 +48,8 @@ namespace TaskManager.Api.Services
         public async Task<AdminUserDto?> GetUserByIdAsync(string userId)
         {
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null) return null;
+            if (user == null)
+                return null;
 
             var userPerformerTasks = await _db.Tasks.Where(t => t.Performers.Any(p => p.Id == user.Id))
                 .Select(p => new TaskItemShortDto
@@ -77,20 +83,24 @@ namespace TaskManager.Api.Services
         }
 
 
-        public async Task<BaseResponseDto> DeleteUserAsync(string userId)
+        public async Task<BaseResponseDto> DeleteUserAsync(string userId, string adminId)
         {
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null) 
+            if (user == null)
+            {
+                _logger.LogWarning("User with id {UserId} not found for deletion", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.NotFound,
                     ResponseMessage = $"User with id {userId} not found"
                 };
+            }
 
             var isInRole = await _userManager.IsInRoleAsync(user, RolesName.Admin);
             if (isInRole)
             {
+                _logger.LogWarning("Admin with id {AdminId} attempted to delete admin account with id {UserId}", adminId, userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
@@ -101,6 +111,7 @@ namespace TaskManager.Api.Services
 
             _db.Users.Remove(user);
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User with id {UserId} was deleted by admin with id {AdminId}", userId, adminId);
 
             return new BaseResponseDto
             {
@@ -111,20 +122,24 @@ namespace TaskManager.Api.Services
         }
 
 
-        public async Task<BaseResponseDto> UpdateUserAsync(string userId, AdminUpdateUserDto dto)
+        public async Task<BaseResponseDto> UpdateUserAsync(string userId, string adminId, AdminUpdateUserDto dto)
         {
             var user = await _db.Users.FindAsync(userId);
             if (user == null)
+            {
+                _logger.LogWarning("User with id {UserId} not found for update", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
                     ErrorType = ErrorType.NotFound,
                     ResponseMessage = $"User with id {userId} not found"
                 };
+            }
 
             var isInRole = await _userManager.IsInRoleAsync(user, RolesName.Admin);
             if (isInRole)
             {
+                _logger.LogWarning("Attempt to update admin account with id {UserId} was blocked", userId);
                 return new BaseResponseDto
                 {
                     IsSuccess = false,
@@ -141,6 +156,8 @@ namespace TaskManager.Api.Services
                 user.Nickname = dto.Nickname;
 
             await _db.SaveChangesAsync();
+            _logger.LogInformation("User with id {UserId} was updated by admin with id {AdminId}", userId, adminId);
+
             return new BaseResponseDto
             {
                 IsSuccess = true,

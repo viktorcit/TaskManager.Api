@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TaskManager.Api.Enums;
 
 namespace TaskManager.Api.Model
 {
@@ -12,19 +13,11 @@ namespace TaskManager.Api.Model
         public string UserName { get; set; } = null!;
         public TaskItem Task { get; set; } = null!;
         [Required]
-        public JoinRequestStatus Status { get; set; }
+        public RequestStatus Status { get; set; }
         [Required]
         [MinLength(50), MaxLength(300)]
         public string Description { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? ReviewedAt { get; set; }
-
-
-        public enum JoinRequestStatus
-        {
-            Pending,
-            Approved,
-            Rejected
-        }
     }
 }

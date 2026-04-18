@@ -1,14 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using TaskManager.Api.Data;
 using TaskManager.Api.Data.DTO.TasksDto;
-using TaskManager.Api.Data.DTO.UserDto;
 using TaskManager.Api.Enums;
 using TaskManager.Api.Extensions;
-using TaskManager.Api.Model;
 using TaskManager.Api.Services.Interfaces;
 
 namespace TaskManager.Api.Controllers
@@ -18,11 +12,13 @@ namespace TaskManager.Api.Controllers
     public class TaskController : ControllerBase
     {
         private readonly ITaskService _taskService;
+        private readonly ILogger<TaskController> _logger;
 
 
-        public TaskController(ITaskService taskService)
+        public TaskController(ITaskService taskService, ILogger<TaskController> logger)
         {
             _taskService = taskService;
+            _logger = logger;
         }
 
 
@@ -45,9 +41,9 @@ namespace TaskManager.Api.Controllers
 
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<TaskItemDto>> GetTaskByIdAsync(int id)
+        public async Task<ActionResult<TaskItemDto>> GetTaskByIdAsync([FromRoute(Name = "id")] int taskId)
         {
-            var task = await _taskService.GetTaskByIdAsync(id);
+            var task = await _taskService.GetTaskByIdAsync(taskId);
             if (task == null)
             {
                 return NotFound("Task not found.");
@@ -129,6 +125,7 @@ namespace TaskManager.Api.Controllers
             var userId = User.GetUserId();
             if (userId == null)
                 return Unauthorized();
+            _logger.LogInformation("Employer {UserId} is attempting to create a task with title: {Title}", userId, dto.Title);
 
             var result = await _taskService.CreateTaskAsync(dto, userId);
 
@@ -141,7 +138,7 @@ namespace TaskManager.Api.Controllers
         }
 
 
-        
+
 
         //Delete
         [Authorize(Roles = "Employer")]
@@ -153,6 +150,8 @@ namespace TaskManager.Api.Controllers
             {
                 return Unauthorized();
             }
+            _logger.LogInformation("Employer {UserId} is attempting to delete task with id: {TaskId}", userId, id);
+
             var result = await _taskService.DeleteTaskAsync(id, userId);
 
             return result.ErrorType switch

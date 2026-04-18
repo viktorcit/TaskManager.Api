@@ -12,10 +12,12 @@ namespace TaskManager.Api.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IProfileService _profileService;
+        private readonly ILogger<ProfileController> _logger;
 
-        public ProfileController(IProfileService profileService)
+        public ProfileController(IProfileService profileService, ILogger<ProfileController> logger)
         {
             _profileService = profileService;
+            _logger = logger;
         }
 
 
@@ -33,11 +35,15 @@ namespace TaskManager.Api.Controllers
         [HttpGet("{nickname}")]
         public async Task<ActionResult<PublicProfileDto>> GetProfileOfUserAsync(string nickname)
         {
-            var user = await _profileService.GetProfileOfUserAsync(nickname);
-            if (user == null)
+            var userId = User.GetUserId();
+
+            var result = await _profileService.GetProfileOfUserAsync(nickname);
+            if (result == null)
                 return NotFound("User not found");
 
-            return user;
+            _logger.LogInformation("A user with an ID {UserId} requests a user profile by nickname: {nickname}", userId, nickname);
+
+            return result;
         }
 
         [Authorize]
@@ -50,7 +56,7 @@ namespace TaskManager.Api.Controllers
 
             var result = await _profileService.GetProfileAsync(userId);
             if (result == null)
-                return Unauthorized("Profile not found");
+                return Unauthorized();
 
             return result;
         }
@@ -63,6 +69,7 @@ namespace TaskManager.Api.Controllers
             var userId = User.GetUserId();
             if (userId == null)
                 return Unauthorized();
+            _logger.LogInformation("A user with an ID {UserId} requests to delete their profile", userId);
 
             var result = await _profileService.DeleteProfileAsync(userId);
 
@@ -85,6 +92,7 @@ namespace TaskManager.Api.Controllers
             var userId = User.GetUserId();
             if (userId == null)
                 return Unauthorized();
+            _logger.LogInformation("A user with an ID {UserId} requests to update their profile", userId);
 
             var result = await _profileService.UpdateProfileAsync(dto, userId);
 
