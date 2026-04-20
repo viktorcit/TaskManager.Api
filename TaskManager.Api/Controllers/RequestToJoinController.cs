@@ -9,7 +9,7 @@ using TaskManager.Api.Services.Interfaces;
 namespace TaskManager.Api.Controllers
 {
     [ApiController]
-    [Route("request-to-join")]
+    [Route("request-to-task")]
     public class RequestToJoinController : ControllerBase
     {
         private readonly IRequestToJoinService _requestToJoinService;

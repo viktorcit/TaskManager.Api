@@ -78,12 +78,16 @@ namespace TaskManager.Api.Services
                 ErrorType = ErrorType.NotFound,
                 ResponseMessage = "Request not found"
             };
-            if (request.Status != RequestStatus.Pending) return new BaseResponseDto
+            if (request.Status != RequestStatus.Pending)
             {
-                ResponseMessage = "Request cannot be approved",
-                IsSuccess = false,
-                ErrorType = ErrorType.BadRequest
-            };
+                _logger.LogWarning("Employer request with ID {RequestId} is not in pending status and cannot be approved. Current status: {Status}", requestId, request.Status);
+                return new BaseResponseDto
+                {
+                    ResponseMessage = "Request cannot be approved",
+                    IsSuccess = false,
+                    ErrorType = ErrorType.BadRequest
+                };
+            }
 
             var user = await _db.Users.FindAsync(request.UserId);
             if (user == null)

@@ -73,7 +73,7 @@ namespace TaskManager.Api.Controllers
             {
                 return Unauthorized();
             }
-            _logger.LogInformation("Admin {AdminId} is approving employer request {RequestId}.", adminId, requestId);
+            _logger.LogInformation("Admin {AdminId} is attempting to approve a request employer role with ID: {RequestId}", adminId, requestId);
 
             var result = await _adminService.ApproveEmployerRequestAsync(requestId, dto, adminId);
 

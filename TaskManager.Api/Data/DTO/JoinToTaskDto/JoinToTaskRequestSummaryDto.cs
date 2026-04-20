@@ -1,4 +1,4 @@
-﻿using static TaskManager.Api.Model.JoinToTaskRequest;
+﻿using TaskManager.Api.Enums;
 
 namespace TaskManager.Api.Data.DTO.JoinToTaskDto
 {
@@ -9,7 +9,7 @@ namespace TaskManager.Api.Data.DTO.JoinToTaskDto
         public string UserId { get; set; } = null!;
         public string UserName { get; set; } = null!;
         public string Description { get; set; } = null!;
-        public JoinRequestStatus Status { get; set; }
+        public RequestStatus Status { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     }
 }

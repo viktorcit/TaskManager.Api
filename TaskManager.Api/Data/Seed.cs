@@ -17,8 +17,8 @@ namespace TaskManager.Api.Data
                 }
             }
 
-            var adminLoginName = "barabolya2077";
-            var adminPassword = "!Admin7720!";
+            var adminLoginName = "AdminAccount";
+            var adminPassword = "!AdminPassword123!";
 
             var existingUser = await userManager.FindByNameAsync(adminLoginName);
 
