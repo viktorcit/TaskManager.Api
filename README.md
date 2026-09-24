@@ -1,1350 +1,161 @@
 # TaskManager.Api
 
-TaskManager API is a RESTful backend application that allows users to create, manage, and participate in tasks with role-based access control (User, Employer, Admin).
+An educational ASP.NET Core Web API for publishing tasks and managing participation. Employers create tasks, users join them directly or submit requests, and administrators review applications for the employer role.
 
-## Features include:
+This is a backend-only portfolio project focused on authentication, role-based access, business rules and relational data modeling.
 
-- Task creation and assignment
-- Role-based permissions
-- Request system for joining tasks
-- Employer approval workflow
-- Moderation by admin
-- Request system for role employer
+## Features
 
-## Tech stacks:
+- Registration and login with JWT authentication.
+- Public task browsing, including descriptions, checklists and participants.
+- Employer-owned tasks with open participation or owner-approved join requests.
+- Employer role applications reviewed by an administrator.
+- Personal profiles and lists of created or joined tasks.
+- Administrative user lookup, updates and deletion.
+- Console and daily file logging through Serilog.
 
-- ASP.NET Core Web API
-- Entity Framework Core
-- ASP.NET Identity (Authentication & Authorization)
-- JWT Bearer Authentication
-- SQLite (Database)
-- Swagger (OpenAPI)
-- C#
-- SOLID Principles
+## Technology Stack
 
-## How to run
+C# / .NET 8, ASP.NET Core Web API, ASP.NET Core Identity, JWT Bearer authentication, Entity Framework Core 8, SQLite, Swagger/OpenAPI and Serilog.
 
-### Requirements
+## Roles and Workflow
 
-- .NET SDK 8.0+
-- Git
+| Role | Main responsibilities |
+| --- | --- |
+| User | Manage a personal profile, participate in tasks and apply for the employer role. |
+| Employer | Create and delete owned tasks and review requests to join them. |
+| Admin | Review employer role applications and manage user accounts. |
 
-### Setup
+A typical scenario:
 
-1. Clone the repository:
+1. Register an account and submit an employer role application.
+2. Sign in as the seeded administrator and approve the application.
+3. Sign in again as the approved user to obtain a JWT containing the Employer role.
+4. Create a task with direct joining enabled or with approval required.
+5. Register a separate participant account and join the task or submit a join request.
+6. For tasks requiring approval, sign in as the owner and approve the request.
 
-```bash
-git clone <repository-url>
-cd <repository-folder>
-```
+Current business rules:
 
-2. Restore dependencies:
+- Employers cannot participate in tasks as performers.
+- An employer application is rejected if the applicant is already participating in tasks.
+- Each user can submit only one employer application, including after rejection.
+- Each user can submit only one join request per task, including after rejection.
+- Only pending requests can be approved or rejected; task join requests are reviewed by the task owner.
 
-```bash
+## Run Locally
+
+### Prerequisites
+
+- .NET 8 SDK and Git.
+- The EF Core CLI tool (`dotnet-ef`), version 8.x.
+- PowerShell for the commands below.
+
+SQLite runs locally; no separate database server is required.
+
+### 1. Clone and restore
+
+```powershell
+git clone https://github.com/viktorcit/TaskManager.Api.git
+cd TaskManager.Api/TaskManager.Api
 dotnet restore
 ```
 
-3. Apply migrations:
+Run the remaining commands from this directory, which contains `TaskManager.Api.csproj`.
 
-```bash
+If the EF Core CLI is not installed:
+
+```powershell
+dotnet tool install --global dotnet-ef --version 8.0.0
+```
+
+### 2. Configure local settings
+
+The project already has a User Secrets ID. Replace the placeholders below before running the commands. Use a randomly generated JWT signing secret of at least 32 bytes and your own administrator password.
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet user-secrets set "JwtSettings:SecretKey" "<your-random-signing-secret>"
+dotnet user-secrets set "AdminUsername" "LocalAdmin"
+dotnet user-secrets set "AdminPassword" "<your-admin-password>"
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Data Source=taskmanager.local.db"
+```
+
+The administrator password must satisfy the default Identity policy: at least six characters, with uppercase, lowercase, a digit and a non-alphanumeric character.
+
+These settings are stored outside the repository. User Secrets are for local development, not a production secret store. Do not commit credentials or your local database.
+
+Issuer and audience are configured in `appsettings.json` under `Jwt:Issuer` and `Jwt:Audience`. The signing secret uses the separate key `JwtSettings:SecretKey`.
+
+The connection string above creates a separate local database instead of using the tracked `app.db`. Choose another unused filename if you already have a database with that name.
+
+### 3. Create the database and start the API
+
+```powershell
 dotnet ef database update
+dotnet dev-certs https --trust
+dotnet run --launch-profile https
 ```
 
-### Start the application
+Apply migrations before starting the application. At startup, the application creates missing roles and the configured administrator account if that username does not already exist. Changing `AdminPassword` does not reset an existing account's password.
 
-```bash
-dotnet run --project TaskManager.Api
+Open [Swagger UI](https://localhost:7016/swagger). The HTTPS launch profile uses `https://localhost:7016` and enables the Development environment.
+
+> The refactor replaced the previous migration history. These instructions target a fresh database. An older database requires a separate data migration or recreation; do not apply the new initial migration to it directly.
+
+## Using the API
+
+Swagger UI exposes the available operations and DTO schemas. The generated OpenAPI document is available at [swagger/v1/swagger.json](https://localhost:7016/swagger/v1/swagger.json). Both are enabled only in Development.
+
+### Public endpoints
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| POST | `/auth/register` | Register a user and receive a JWT. |
+| POST | `/auth/login` | Sign in and receive a JWT. |
+| GET | `/tasks` | List tasks with the InProgress status. |
+| GET | `/tasks/{taskId}` | Retrieve task details. |
+
+Other operations are grouped under `/profile`, `/users`, `/employer-requests`, `/tasks` and `/request-to-task`.
+
+### Authenticated requests
+
+Registration and login return the token itself, not an object with a `token` property. Send its value without surrounding quotes in the header:
+
+```http
+Authorization: Bearer <token>
 ```
 
-The application can also be started via Visual Studio.
-
-The project uses SQLite, so no external database server is required.
-
-## API Documentation
-
-Swagger UI (available after running the project):
-
-- Swagger UI: https://localhost:<port>/swagger
-- Full API description: see sections below
-
-## Project structure
-
-- Controllers: API controllers responsible for processing HTTP requests.
-- Data: database context and Seed.
-- DTOs: Data transfer objects used for requests and responses.
-- Migrations: EF core migrations for database management.
-- Models: Entity classes of the project.
-- Services: business logic and services used by controllers.
-
-## Authentication and Roles
-
-### Get JWT Token
-
-Obtain a JWT token via:
-
-- `POST /account/register`
-- `POST /account/login`
-
-### Roles
-
-- User
-- Admin
-- Employer
-
-### Endpoints for admins and employers only
-
-#### Admin:
-
-- `GET /admin/employer-requests`
-- `GET /admin/employer-requests/{id}`
-- `GET /users`
-- `GET /users/{id}`
-- `POST /admin/employer-requests/{id}/approve`
-- `POST /admin/employer-requests/{id}/reject`
-- `PATCH /users/{id}`
-- `DELETE /users/{id}`
-
-#### Employers:
-
-- `GET /request-to-join/requests-join-to-task`
-- `GET /request-to-join/requests-join-to-task/{id}`
-- `GET /tasks/my-created`
-- `POST /request-to-join/requests-join-to-task/{id}/approve`
-- `POST /request-to-join/requests-join-to-task/{id}/reject`
-- `POST /tasks/create`
-- `DELETE /tasks/delete/{id}`
-
-### Available for all authenticated users (needs Authorization header: Bearer <token>):
-
-- `GET /profile`
-- `GET /profile/{nickname}`
-- `GET /profile/my`
-- `GET /tasks/my-performing`
-- `GET /tasks/my-performing/{id}`
-- `POST /account/request-employer`
-- `POST /tasks/join/{id}`
-- `POST /tasks/join-request/{id}`
-- `PATCH /profile`
-- `DELETE /profile`
-
-### Public endpoints (These endpoints can be accessed without authentication.)
-
-- `GET /tasks`
-- `GET /tasks/all`
-- `GET /tasks/{id}`
-- `POST /account/register`
-- `POST /account/login`
-
-## List of endpoints
-
-### Admin
-
-- `GET /admin/employer-requests`
-
-  **Description:** Get a list of requests for the role of employer
-
-  **Roles:**
-  - Admin
-
-- `GET /admin/employer-requests/{id}`
-
-  **Description:** Get a specific request for an employer role by ID
-
-  **Roles:**
-  - Admin
-
-- `POST /admin/employer-requests/{id}/approve`
-
-  **Description:** Accept the request for employer role
-
-  **Roles:**
-  - Admin
-
-- `POST /admin/employer-requests/{id}/reject`
-
-  **Description:** Rejection of a request for an employer role
-
-  **Roles:**
-  - Admin
-
-### Auth
-
-- `POST /account/register`
-
-  **Description:** Register an account and receive a token
-
-  **Roles:** For unregistered users
-
-- `POST /account/login`
-
-  **Description:** Login to your account and receive a token
-
-  **Roles:** For unregistered users
-
-- `POST /account/request-employer`
-
-  **Description:** Request for an employer role
-
-  **Roles:**
-  - User
-
-### Profile
-
-- `GET /profile`
-
-  **Description:** Get all profiles
-
-  **Roles:**
-  - User
-  - Employer
-  - Admin
-
-- `GET /profile/{nickname}`
-
-  **Description:** Get a specific profile by nickname
-
-  **Roles:**
-  - User
-  - Admin
-  - Employer
-
-- `GET /profile/my`
-
-  **Description:** Get your profile
-
-  **Roles:**
-  - Admin
-  - User
-  - Employer
-
-- `PATCH /profile`
-
-  **Description:** Update your profile
-
-  **Roles:**
-  - User
-  - Employer
-
-- `DELETE /profile`
-
-  **Description:** Delete your profile
-
-  **Roles:**
-  - User
-  - Employer
-
-### RequestToJoin
-
-- `GET /request-to-join/requests-join-to-task`
-
-  **Description:** Get a list of requests to join the task you created.
-
-  **Roles:**
-  - Employer
-
-- `GET /request-to-join/requests-join-to-task/{id}`
-
-  **Description:** Get a specific request to join the task you created
-
-  **Roles:**
-  - Employer
-
-- `POST /request-to-join/requests-join-to-task/{id}/approve`
-
-  **Description:** Approve a request to join your task
-
-  **Roles:**
-  - Employer
-
-- `POST /request-to-join/requests-join-to-task/{id}/reject`
-
-  **Description:** Reject a request to join your task
-
-  **Roles:**
-  - Employer
-
-### Task
-
-- `GET /tasks`
-
-  **Description:** Get all tasks with the "in progress" status
-
-  **Roles:**
-  - All users(including unauthenticated)
-
-- `GET /tasks/all`
-
-  **Description:** Get all tasks with any status
-
-  **Roles:**
-  - All users(including unauthenticated)
-
-- `GET /tasks/{id}`
-
-  **Description:** Get a task by ID
-
-  **Roles:**
-  - All users(including unauthenticated)
-
-- `GET /tasks/my-created`
-
-  **Description:** Get user-created tasks
-
-  **Roles:**
-  - Employer
-
-- `GET /tasks/my-performing`
-
-  **Description:** Get the tasks you are performing
-
-  **Roles:**
-  - User
-
-- `GET /tasks/my-performing/{id}`
-
-  **Description:** Get the task you are performing by ID
-
-  **Roles:**
-  - User
-
-- `POST /tasks/create`
-
-  **Description:** Create a task
-
-  **Roles:**
-  - Employer
-
-- `POST /tasks/join/{id}`
-
-  **Description:** Join a task if it is open
-
-  **Roles:**
-  - User
-
-- `POST /tasks/join-request/{id}`
-
-  **Description:** Create a request to join a task if it is closed
-
-  **Roles:**
-  - User
-
-- `DELETE /tasks/delete/{id}`
-
-  **Description:** Delete your task
-
-  **Roles:**
-  - Employer
-
-### User
-
-- `GET /users`
-
-  **Description:** Get list of users
-
-  **Roles:**
-  - Admin
-
-- `GET /users/{id}`
-
-  **Description:** Get a user by ID
-
-  **Roles:**
-  - Admin
-
-- `PATCH /users/{id}`
-
-  **Description:** Change user by ID
-
-  **Roles:**
-  - Admin
-
-- `DELETE /users/{id}`
-
-  **Description:** Delete user by ID
-
-  **Roles:**
-  - Admin
-
-## Request bodies
-
-### `POST /account/register`
-
-```json
-{
-  "name": "string",
-  "nickname": "string",
-  "age": 100,
-  "password": "string"
-}
+Tokens expire after one hour. Sign in again after a role change to obtain a token with the updated roles.
+
+Swagger currently has no Bearer authorization configuration. Use an HTTP client such as Postman, curl or your IDE's HTTP client to send authenticated requests.
+
+## Project Structure
+
+```text
+TaskManager.Api/
+|-- Controllers/       HTTP endpoints grouped by functional area
+|-- Services/          Business logic and database operations
+|-- Interfaces/        Service contracts
+|-- Entity/            Persistence entities, including TaskPerformer
+|-- Data/
+|   |-- Contracts/     Shared data shapes
+|   |-- DTO/           Request, response and service result DTOs
+|   |-- AppDbContext.cs
+|   `-- Seed.cs        Role and administrator initialization
+|-- Enums/             Task, request and response classifications
+|-- Extensions/        Claims principal helpers
+|-- Helpers/           Response factory, role names and error messages
+|-- Migrations/        EF Core migrations
+`-- Program.cs         Dependency injection and HTTP pipeline
 ```
 
-### `POST /account/login`
+Controllers delegate application operations to services. Services use EF Core and ASP.NET Core Identity directly; the application is organized within a single web project.
 
-```json
-{
-  "nickname": "string",
-  "password": "string"
-}
-```
+## Scope
 
-### `POST /account/request-employer`
+This is a learning project, not a production-ready service. It has no frontend or automated test suite. Task completion/cancellation and token refresh are not exposed as API operations.
 
-```json
-{
-  "companyName": "string",
-  "website": "string",
-  "description": "string"
-}
-```
+## License
 
-### `POST /admin/employer-requests/{id}/approve`
-
-```json
-{
-  "adminComment": "string"
-}
-```
-
-### `POST /admin/employer-requests/{id}/reject`
-
-```json
-{
-  "reason": "string"
-}
-```
-
-### `PATCH /profile`
-
-```json
-{
-  "name": "string",
-  "age": 100
-}
-```
-
-### `POST /request-to-join/requests-join-to-task/{id}/approve`
-
-```json
-{
-  // no request body
-}
-```
-
-### `POST /request-to-join/requests-join-to-task/{id}/reject`
-
-```json
-{
-  // no request body
-}
-```
-
-### `POST /tasks/create`
-
-```json
-{
-  "title": "string",
-  "description": "string",
-  "dueDate": "2026-04-02T19:08:10.129Z",
-  "canAnyoneJoin": true,
-  "performersId": ["string"]
-}
-```
-
-### `POST /tasks/join-request/{id}`
-
-```json
-{
-  "description": "string"
-}
-```
-
-### `PATCH /users/{id}`
-
-```json
-{
-  "name": "string",
-  "nickname": "string",
-  "age": 0
-}
-```
-
-## Full API Documentation
-
-### Admin
-
-- `GET /admin/employer-requests`
-
-  **Description:** Get a list of requests for the role of employer
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "userId": "string",
-      "companyName": "string",
-      "createdAt": "2026-03-28T18:54:41.795Z",
-      "updatedAt": "2026-03-28T18:54:41.795Z",
-      "status": "string"
-    }
-  ]
-  ```
-
-- `GET /admin/employer-requests/{id}`
-
-  **Description:** Get a specific request for an employer role by ID
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": 0,
-    "userId": "string",
-    "companyName": "string",
-    "createdAt": "2026-03-28T18:57:36.249Z",
-    "updatedAt": "2026-03-28T18:57:36.249Z",
-    "status": "string",
-    "description": "string"
-  }
-  ```
-
-- `POST /admin/employer-requests/{id}/approve`
-
-  **Description:** Accept the request for employer role
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-  - 500 Internal Server Error
-
-  **Request body:**
-
-  ```json
-  {
-    "adminComment": "stringstringstringstringstringstringstringstringst"
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "status": "string",
-    "id": 0,
-    "userId": "string"
-  }
-  ```
-
-- `POST /admin/employer-requests/{id}/reject`
-
-  **Description:** Rejection of a request for an employer role
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Request body:**
-
-  ```json
-  {
-    "reason": "stringstringstringstringstringstringstringstringst"
-  }
-  ```
-
-  **Responses:**
-  - 200 OK - empty response body
-
-### Auth
-
-- `POST /account/register`
-
-  **Description:** Register an account and receive a token
-
-  **Roles:** For unregistered users
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 409 Conflict
-  - 500 Internal Server Error
-
-  **Request body:**
-
-  ```json
-  {
-    "name": "string",
-    "nickname": "string",
-    "age": 100,
-    "password": "string"
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "token": "string"
-  }
-  ```
-
-- `POST /account/login`
-
-  **Description:** Login to your account and receive a token
-
-  **Roles:** For unregistered users
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Request body:**
-
-  ```json
-  {
-    "nickname": "string",
-    "password": "string"
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "token": "string"
-  }
-  ```
-
-- `POST /account/request-employer`
-
-  **Description:** Request for an employer role
-
-  **Roles:**
-  - User
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Request body:**
-
-  ```json
-  {
-    "companyName": "string",
-    "website": "string",
-    "description": "stringstringstringstringstringstringstringstringst"
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "companyName": "string",
-    "website": "string",
-    "description": "stringstringstringstringstringstringstringstringst"
-  }
-  ```
-
-  ### Profile
-
-- `GET /profile`
-
-  **Description:** get all profiles
-
-  **Roles:**
-  - User
-  - Employer
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-
-  **Response:**
-
-  ```json
-  [
-    {
-      "id": "string",
-      "name": "string",
-      "nickname": "string"
-    }
-  ]
-  ```
-
-- `GET /profile/{nickname}`
-
-  **Description:** Get a specific profile by nickname
-
-  **Roles:**
-  - User
-  - Admin
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": "string",
-    "name": "string",
-    "nickname": "string"
-  }
-  ```
-
-- `GET /profile/my`
-
-  **Description:** Get your profile
-
-  **Roles:**
-  - Admin
-  - User
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-
-  **Responses:**
-
-  ```json
-  {
-    "id": "string",
-    "name": "string",
-    "nickname": "string",
-    "age": 0,
-    "createdAt": "2026-03-29T22:45:20.210Z",
-    "ownerTasks": [
-      {
-        "id": 0,
-        "title": "string",
-        "status": 0
-      }
-    ],
-    "performerTasks": [
-      {
-        "id": 0,
-        "title": "string",
-        "status": 0
-      }
-    ]
-  }
-  ```
-
-- `PATCH /profile`
-
-  **Description:** Update your profile
-
-  **Roles:**
-  - User
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Request body:**
-
-  ```json
-  {
-    "name": "string",
-    "age": 100
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "name": "string",
-    "age": 100
-  }
-  ```
-
-- `DELETE /profile`
-
-  **Description:** Delete your profile
-
-  **Roles:**
-  - User
-  - Employer
-
-  **Response codes:**
-  - 204 No Content
-  - 403 Forbidden
-  - 401 Unauthorized
-
-  **Responses:**
-  - 204 No Content - empty response body
-
-  ### RequestToJoin
-
-- `GET /request-to-join/requests-join-to-task`
-
-  **Description:** Get a list of requests to join the task you created.
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "taskId": 0,
-      "userId": "string",
-      "userName": "string",
-      "description": "string",
-      "status": 0,
-      "createdAt": "2026-03-29T23:05:38.227Z"
-    }
-  ]
-  ```
-
-- `GET /request-to-join/requests-join-to-task/{id}`
-
-  **Description:** Get a specific request to join the task you created
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": 0,
-    "taskId": 0,
-    "userId": "string",
-    "userName": "string",
-    "description": "string",
-    "status": 0,
-    "createdAt": "2026-03-29T23:10:25.344Z"
-  }
-  ```
-
-- `POST /request-to-join/requests-join-to-task/{id}/approve`
-
-  **Description:** approve a request to join your task
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  "message": "Request has been approved."
-  ```
-
-- `POST /request-to-join/requests-join-to-task/{id}/reject`
-
-  **Description:** reject a request to join your task
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  "message": "Request has been rejected."
-  ```
-
-  ### Task
-
-- `GET /tasks`
-
-  **Description:** Get all tasks with the "in progress" status
-
-  **Roles:**
-  - All users(unregistered too)
-
-  **Response codes:**
-  - 200 OK
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "title": "string",
-      "ownerId": "string",
-      "ownerUsername": "string",
-      "createdAt": "2026-04-01T20:25:07.092Z",
-      "description": "string",
-      "status": 0
-    }
-  ]
-  ```
-
-- `GET /tasks/all`
-
-  **Description:** Get all tasks with any status
-
-  **Roles:**
-  - All users(unregistered too)
-
-  **Response codes:**
-  - 200 OK
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "title": "string",
-      "ownerId": "string",
-      "ownerUsername": "string",
-      "createdAt": "2026-04-01T20:27:02.299Z",
-      "description": "string",
-      "status": 0
-    }
-  ]
-  ```
-
-- `GET /tasks/{id}`
-
-  **Description:** Get a task by ID
-
-  **Roles:**
-  - All users(unregistered too)
-
-  **Response codes:**
-  - 200 OK
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": 0,
-    "title": "string",
-    "description": "string",
-    "dueDate": "2026-04-02T18:32:46.930Z",
-    "createdAt": "2026-04-02T18:32:46.930Z",
-    "updatedAt": "2026-04-02T18:32:46.930Z",
-    "status": 0,
-    "completedAt": "2026-04-02T18:32:46.930Z",
-    "canAnyoneJoin": true,
-    "ownerId": "string",
-    "owner": {
-      "id": "string",
-      "name": "string",
-      "username": "string"
-    },
-    "ownerUsername": "string",
-    "performers": [
-      {
-        "id": "string",
-        "name": "string",
-        "username": "string"
-      }
-    ],
-    "": ["string"]
-  }
-  ```
-
-- `GET /tasks/my-created`
-
-  **Description:** get user-created tasks
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 404 Not Found
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "title": "string",
-      "ownerId": "string",
-      "ownerUsername": "string",
-      "createdAt": "2026-04-02T18:45:58.537Z",
-      "description": "string",
-      "status": 0
-    }
-  ]
-  ```
-
-- `GET /tasks/my-performing`
-
-  **Description:** get the tasks you are performing
-
-  **Roles:**
-  - User
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": 0,
-      "title": "string",
-      "ownerId": "string",
-      "ownerUsername": "string",
-      "createdAt": "2026-04-02T18:48:11.066Z",
-      "description": "string",
-      "status": 0
-    }
-  ]
-  ```
-
-- `GET /tasks/my-performing/{id}`
-
-  **Description:** Get the task you are performing by ID
-
-  **Roles:**
-  - User
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": 0,
-    "title": "string",
-    "description": "string",
-    "dueDate": "2026-04-02T19:05:23.961Z",
-    "createdAt": "2026-04-02T19:05:23.961Z",
-    "updatedAt": "2026-04-02T19:05:23.961Z",
-    "status": 0,
-    "completedAt": "2026-04-02T19:05:23.961Z",
-    "canAnyoneJoin": true,
-    "ownerId": "string",
-    "owner": {
-      "id": "string",
-      "name": "string",
-      "username": "string"
-    },
-    "ownerUsername": "string",
-    "performers": [
-      {
-        "id": "string",
-        "name": "string",
-        "username": "string"
-      }
-    ],
-    "performersId": ["string"]
-  }
-  ```
-
-- `POST /tasks/create`
-
-  **Description:** create a task
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Request body:**
-
-  ```json
-  {
-    "title": "string",
-    "description": "string",
-    "dueDate": "2026-04-02T19:08:10.129Z",
-    "canAnyoneJoin": true,
-    "performersId": ["string"]
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  {
-    "id": 0,
-    "title": "string",
-    "description": "string",
-    "dueDate": "2026-04-02T19:16:18.864Z",
-    "createdAt": "2026-04-02T19:16:18.864Z",
-    "updatedAt": "2026-04-02T19:16:18.864Z",
-    "status": 0,
-    "completedAt": "2026-04-02T19:16:18.864Z",
-    "canAnyoneJoin": true,
-    "ownerId": "string",
-    "ownerUsername": "string",
-    "performers": [
-      {
-        "id": "string",
-        "name": "string",
-        "username": "string"
-      }
-    ]
-  }
-  ```
-
-- `POST /tasks/join/{id}`
-
-  **Description:** join a task if it is open
-
-  **Roles:**
-  - User
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  "message": "You have successfully joined the task."
-  ```
-
-- `POST /tasks/join-request/{id}`
-
-  **Description:** Create a request to join a task if it is closed
-
-  **Roles:**
-  - User
-
-  **Response codes:**
-  - 200 OK
-  - 400 Bad Request
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Request body:**
-
-  ```json
-  {
-    "description": "stringstringstringstringstringstringstringstringst"
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  "message": "Your request to join the task has been sent to the owner."
-  ```
-
-- `DELETE /tasks/delete/{id}`
-
-  **Description:** Delete your task
-
-  **Roles:**
-  - Employer
-
-  **Response codes:**
-  - 204 No Content
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-  - 204 No Content - empty response body
-
-  ### User
-
-- `GET /users`
-
-  **Description:** get list of users
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 Ok
-  - 401 Unauthorized
-  - 403 Forbidden
-
-  **Responses:**
-
-  ```json
-  [
-    {
-      "id": "string",
-      "name": "string",
-      "nickname": "string",
-      "age": 100,
-      "createdAt": "2026-04-02T20:06:29.201Z",
-      "ownerTasks": [
-        {
-          "id": 0,
-          "title": "string",
-          "status": 0
-        }
-      ],
-      "performerTasks": [
-        {
-          "id": 0,
-          "title": "string",
-          "status": 0
-        }
-      ]
-    }
-  ]
-  ```
-
-- `GET /users/{id}`
-
-  **Description:** get a user by ID
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 Ok
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-
-  ```json
-  {
-    "id": "string",
-    "name": "string",
-    "nickname": "string",
-    "age": 100,
-    "createdAt": "2026-04-02T20:07:15.990Z",
-    "ownerTasks": [
-      {
-        "id": 0,
-        "title": "string",
-        "status": 0
-      }
-    ],
-    "performerTasks": [
-      {
-        "id": 0,
-        "title": "string",
-        "status": 0
-      }
-    ]
-  }
-  ```
-
-- `PATCH /users/{id}`
-
-  **Description:** change user by ID
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 200 OK
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Request body:**
-
-  ```json
-  {
-    "name": "string",
-    "nickname": "string",
-    "age": 0
-  }
-  ```
-
-  **Responses:**
-
-  ```json
-  "message": "Data of user {id} updated"
-  ```
-
-- `DELETE /users/{id}`
-
-  **Description:** delete user by ID
-
-  **Roles:**
-  - Admin
-
-  **Response codes:**
-  - 204 No Content
-  - 401 Unauthorized
-  - 403 Forbidden
-  - 404 Not Found
-
-  **Responses:**
-  - 204 No Content - empty response body
+[MIT](LICENSE.txt).
