@@ -1,11 +1,25 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using TaskManager.Api.Model;
+using TaskManager.Api.Entity;
 
 namespace TaskManager.Api.Data
 {
-    public static class Seed
+    public class Seed
     {
-        public static async Task SeedAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        private readonly IConfiguration _config;
+        private readonly string _adminUserName;
+        private readonly string _adminPassword;
+
+        public Seed(IConfiguration config)
+        {
+            _config = config;
+            _adminUserName = _config["AdminUsername"]
+                ?? throw new InvalidOperationException("AdminUsername не задан в конфигурации (AdminUsername).");
+            _adminPassword = _config["AdminPassword"]
+                ?? throw new InvalidOperationException("AdminPassword не задан в конфигурации (AdminPassword).");
+        }
+
+
+        public async Task SeedAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             string[] roles = { "Admin", "User", "Employer" };
 
@@ -17,17 +31,16 @@ namespace TaskManager.Api.Data
                 }
             }
 
-            var adminLoginName = "AdminAccount";
-            var adminPassword = "!AdminPassword123!";
+            var adminUserName = _adminUserName;
+            var adminPassword = _adminPassword;
 
-            var existingUser = await userManager.FindByNameAsync(adminLoginName);
+            var existingUser = await userManager.FindByNameAsync(adminUserName);
 
             if (existingUser == null)
             {
                 var admin = new ApplicationUser
                 {
-                    Nickname = adminLoginName,
-                    UserName = adminLoginName,
+                    UserName = adminUserName,
                     Name = "Admin",
                     CreatedAt = DateTimeOffset.UtcNow
                 };

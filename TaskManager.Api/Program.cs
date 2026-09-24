@@ -4,11 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TaskManager.Api.Data;
-using TaskManager.Api.JWT;
-using TaskManager.Api.Model;
-using TaskManager.Api.Services;
-using TaskManager.Api.Services.Interfaces;
 using Serilog;
+using TaskManager.Api.Services.Employer;
+using TaskManager.Api.Interfaces.Employer;
+using TaskManager.Api.Interfaces.Task;
+using TaskManager.Api.Interfaces.User;
+using TaskManager.Api.Services.Auth;
+using TaskManager.Api.Services.User;
+using TaskManager.Api.Interfaces.Auth;
+using TaskManager.Api.Entity;
+using TaskManager.Api.Services.TaskItem;
+using Microsoft.EntityFrameworkCore.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,14 +23,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtService>();
-builder.Services.AddScoped<EmployerProfileService>();
-builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<IEmployerProfileService, EmployerProfileService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IRequestToJoinService, RequestToJoinService>();
+builder.Services.AddScoped<IRequestToJoinTaskService, RequestToJoinTaskService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddTransient<IJwtService, JwtService>();
+builder.Services.AddScoped<Seed>();
+builder.Services.AddScoped<IEmployerRoleRequestService, EmployerRoleRequestService>();
 builder.Logging.AddConsole();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -34,11 +40,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrEmpty(jwtKey))
-{
-    throw new InvalidOperationException("JWT ключ не задан в конфигурации (Jwt:Key).");
-}
+var jwtKey = builder.Configuration["JwtSettings:SecretKey"]
+    ?? throw new InvalidOperationException("JWT ключ не задан в конфигурации (JwtSettings:SecretKey).");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -87,8 +90,8 @@ using (var scope = app.Services.CreateScope())
 
     var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-
-    await Seed.SeedAsync(userManager, roleManager);
+    var seed = services.GetRequiredService<Seed>();
+    await seed.SeedAsync(userManager, roleManager);
 }
 
 app.UseHttpsRedirection();
